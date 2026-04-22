@@ -30,13 +30,15 @@ Ready-to-post copy for launch day. Neutral-tone, no villain narrative, no third-
 
 **Tweet 3 (install)**
 
-> One paste in Terminal. The script:
+> One paste in Terminal. ~2 minutes end to end. The script:
 >
-> 1. Installs Homebrew + Claude CLI if missing
-> 2. Runs `claude setup-token` — you sign into Anthropic in your browser (45s, the only manual step)
-> 3. Extracts the daemon into ~/.maxbridge/, starts it via launchd
-> 4. Patches ~/.openclaw/openclaw.json with a backup
-> 5. Opus 4.7 live
+> 1. Installs Homebrew + Claude CLI silently if missing
+> 2. Opens anthropic.com in your browser — you sign in with your Claude Max account + click Approve (~45s, the only manual step)
+> 3. Extracts the daemon into ~/.maxbridge/, registers a launchd service
+> 4. Patches ~/.openclaw/openclaw.json (timestamped backup)
+> 5. Self-tests Opus 4.7 round-trip → REPORT_STATUS=success
+>
+> Mac mini without a monitor? Screen Sharing during step 2 only; rest is headless.
 
 **Tweet 4 (why free)**
 
@@ -67,11 +69,11 @@ Ready-to-post copy for launch day. Neutral-tone, no villain narrative, no third-
 >
 > Maxbridge is a small Apple Silicon macOS daemon (no GUI, no `.app`) that runs a local HTTP proxy on 127.0.0.1:7423 and exposes your locally-installed Claude CLI OAuth session as an Anthropic `/v1/messages` + OpenAI `/v1/chat/completions` endpoint. OpenClaw (or any other local tool that speaks those APIs) routes through it and gets Claude Opus 4.7 responses billed to your existing Claude Max subscription. No API key on the wire. No middleman server. OAuth session lives in the macOS Keychain, stored by the Claude CLI — Maxbridge never reads it.
 >
-> Install is one paste:
+> Install is one paste in Terminal:
 >
->     curl -fsSL https://install.marsirius.ai | bash
+>     curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash
 >
-> The script installs Homebrew + the Claude CLI if they're missing, runs `claude setup-token` (opens Anthropic's OAuth in your browser for ~45s — the only interactive step), drops a `launchd` daemon into `~/.maxbridge/`, patches `~/.openclaw/openclaw.json` with a timestamped backup, and ends with a real Opus 4.7 round-trip test.
+> The script installs Homebrew + the Claude CLI if they're missing, opens anthropic.com in your browser for a one-time Claude Max sign-in (~45s — the only interactive step; need screen access on the target Mac for this moment, Screen Sharing works), drops a `launchd` daemon into `~/.maxbridge/`, patches `~/.openclaw/openclaw.json` with a timestamped backup, and ends with a real Opus 4.7 round-trip test against the new daemon.
 >
 > Free forever, MIT licensed, full source:
 > – Landing + one-paste install: https://maxbridge.marsirius.ai

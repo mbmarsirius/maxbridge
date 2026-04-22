@@ -25,7 +25,7 @@ While the script runs (1–3 minutes), send me a short text status update every 
 2. Cleans any partial prior install (retries are idempotent)
 3. Installs Homebrew if missing (non-interactive)
 4. Installs the Claude CLI via Homebrew if missing
-5. **Opens `anthropic.com` in my browser** — I sign in to my Claude Max plan and approve the authorization. This is the only manual step, ~45 seconds.
+5. **Opens `anthropic.com` in my browser** — I sign in to my Claude Max (or Pro) plan and click Approve. This is the only manual step, ~45 seconds. *If I'm running this on a Mac mini / headless Mac, I need Screen Sharing or a physical display open at this moment so I can see and click the login page.*
 6. Downloads + SHA256-verifies the Maxbridge daemon bundle; extracts server + Node runtime into `~/.maxbridge/` (no app, no Applications folder)
 7. Registers a `launchd` daemon (`ai.maxbridge.proxy`) — persistent background service on `127.0.0.1:7423`, auto-restarts on crash
 8. Patches `~/.openclaw/openclaw.json` (timestamped backup kept) — registers `maxbridge` provider, routes the main agent to `maxbridge/claude-opus-4-7`

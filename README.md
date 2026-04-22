@@ -33,32 +33,64 @@ OpenClaw ──▶ Maxbridge (127.0.0.1:7423) ──▶ your Claude CLI ──�
 4. **Respond** — Claude Opus 4.7 responds under your Max subscription. No API key on the wire, no middleman server.
 5. **No charges** — the only thing Maxbridge adds to your Mac is a menu-bar icon.
 
-## Install (one paste, ~90 seconds)
+## Install (one paste, ~2 minutes)
 
 Paste this in your Mac's Terminal:
 
 ```bash
-curl -fsSL https://install.marsirius.ai | bash
+curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash
 ```
 
 That's the whole install. The script is idempotent — you can re-run it safely; step 2 auto-cleans any partial state from a prior attempt.
 
-**What happens, headlessly:**
+### What you'll see — step by step
 
-1. Pre-flight (macOS 13+, Apple Silicon)
-2. Cleans any partial prior install
-3. Installs Homebrew if missing
-4. Installs the Claude CLI via Homebrew if missing
-5. **Opens `anthropic.com` in your browser** for Claude login — you sign in to your Max plan and approve the authorization. This is the *only* manual step, ~45 seconds.
-6. Downloads + SHA256-verifies the Maxbridge daemon bundle; extracts Node runtime + server into `~/.maxbridge/` (no `.app`, no Applications folder, no GUI)
-7. Registers a `launchd` daemon (`ai.maxbridge.proxy`) — persistent background service on `127.0.0.1:7423`, auto-restarts on crash
-8. Patches `~/.openclaw/openclaw.json` (timestamped backup kept) — registers `maxbridge` as a provider, routes the main agent to `maxbridge/claude-opus-4-7`
-9. Kickstarts the OpenClaw gateway
-10. Self-tests with a real Opus 4.7 round-trip; prints `REPORT_STATUS=success`
+| Time | Phase | What happens | You do |
+|---|---|---|---|
+| 0–10s | Pre-flight | macOS + Apple Silicon check; removes any previous Maxbridge | nothing |
+| 10–40s | Dependencies | Homebrew + Claude CLI installed silently (skipped if already present; +2–3 min on a fresh Mac with no brew) | nothing |
+| **40–90s ★** | **Claude login** | A browser window opens to `anthropic.com` | **Sign in with your Claude Max/Pro account → click Approve. ~45 seconds. This is the ONLY manual step.** |
+| 90–120s | Daemon + wire-up | Downloads Maxbridge (29 MB, SHA-verified), extracts into `~/.maxbridge/`, registers a `launchd` service. Patches `~/.openclaw/openclaw.json` (timestamped backup kept) to route your main agent to `maxbridge/claude-opus-4-7`. Kickstarts the OpenClaw gateway. | nothing |
+| 120s | Self-test + done | Real Opus 4.7 round-trip. Terminal prints `REPORT_STATUS=success`. | Open Telegram (or whichever channel your bot uses) and send any message — the reply comes via your Max plan. |
 
-End state: Maxbridge running locally at `127.0.0.1:7423` as a background daemon, OpenClaw routed through it, Opus 4.7 answering under your Max plan.
+### Running on a Mac mini with no monitor?
 
-**Prefer to drag-drop into your bot chat?** Download [install-maxbridge.md](https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md) and drop it into your OpenClaw bot; it carries the same single command above. The bot just runs it for you. (Secondary path — the terminal one-paste above is the primary, bulletproof install.)
+Step ★ opens a browser on the Mac's screen, so you'll need Screen Sharing (System Settings → General → Sharing), a VNC client, or a physical display plugged in to click through the Anthropic login. After the OAuth step, the install is fully headless — you can close Screen Sharing and let it finish.
+
+### How to verify it worked (the 5-point proof)
+
+If you want to confirm Maxbridge is genuinely running Opus 4.7 through your Max OAuth (not an API fallback), run these from your Mac's Terminal after install:
+
+```bash
+# 1. OpenClaw is pointed at Maxbridge (not Anthropic's endpoint)
+grep -A2 '"main"' ~/.openclaw/openclaw.json | grep model
+#    → "model": "maxbridge/claude-opus-4-7"
+
+# 2. The daemon is running in local-oauth mode (no API key)
+curl -sS http://127.0.0.1:7423/v1/status | python3 -m json.tool | head -20
+#    → "mode": "local-oauth", "keySource": "none"
+
+# 3. Claude CLI is authenticated via OAuth token (not API key)
+grep -E 'authMethod|oauthAccount' ~/.claude.json | head
+#    → "oauthAccount": { ... }
+
+# 4. No Anthropic API key is set anywhere
+echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-none}" && env | grep -i anthropic_api_key || echo "not set"
+#    → ANTHROPIC_API_KEY=none
+
+# 5. Live round-trip — Opus 4.7 via Maxbridge
+curl -sS -X POST http://127.0.0.1:7423/v1/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"claude-opus-4-7","max_tokens":32,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}'
+#    → {"id":"msg_localclaw_...","model":"claude-opus-4-7",
+#       "content":[{"type":"text","text":"MAXBRIDGE_LIVE"}], ...}
+```
+
+The `msg_localclaw_` id prefix signs that the response came from the local bridge. If you were hitting Anthropic's API directly it would be `msg_01...`.
+
+### Alternative: drag-drop into your OpenClaw bot
+
+Download [install-maxbridge.md](https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md) and drop it into your OpenClaw bot chat. The bot reads it and runs the same `curl | bash` for you. The OAuth browser step still happens on the Mac — so this path also needs screen access during that ~45 seconds.
 
 ## Requirements
 
@@ -88,6 +120,31 @@ Yes. MIT license, no paid tier planned. If you want to support the work, ⭐ the
 
 **Will it work without OpenClaw?**
 The proxy is a generic local Anthropic endpoint on `127.0.0.1:7423` — any app that speaks the Anthropic API can use it. But the install flow is built for OpenClaw users.
+
+## Troubleshooting
+
+**`REPORT_STATUS=partial` after install.** The installer now prints the exact failure reason when the step-9 self-test fails: HTTP status code, response body (first 2 KB), last 30 lines of `~/Library/Logs/Maxbridge/daemon.err.log`, and your `claude --version`. Read that block — it points at the real cause. The most common cases are:
+
+- `port 7423 is held by: <PID>` → another process is bound. Run `sudo lsof -i :7423` to identify, stop it, re-run the installer.
+- `When using --print, --output-format=stream-json requires --verbose` → you hit an old daemon bundle. Re-run the installer; step 2 now aggressively cleans prior state.
+- `Command failed: claude ...` with a long flag list → same as above; an ancestor Maxbridge version is answering. Re-run.
+
+**The bot still replies with `openai-codex/gpt-5.4` (or another fallback model) after install.** OpenClaw caches the active model per session. Run `/model` in the bot chat once to reset the session to the new default (`maxbridge/claude-opus-4-7`). You only need to do this once per session. After that, `/status` will show `maxbridge/claude-opus-4-7` and every reply comes via your Max plan.
+
+**Anthropic login browser didn't open automatically.** The Claude CLI prints a fallback URL — copy it into any browser on any device, sign in, and paste the resulting code back in the Terminal. The installer waits for you.
+
+**macOS asks "rg would like to access files in your Documents folder" (or Desktop, iCloud Drive).** This is macOS Sequoia's App Management feature kicking in when Claude's Grep tool scans files on first use. Click Allow for each folder you want Claude to read; the approvals are persistent (you only do it once per folder, ever).
+
+**I run OpenClaw in a custom layout and the `openclaw.json` patch broke something.** Every patch keeps a timestamped backup at `~/.openclaw/openclaw.json.bak-maxbridge-<date>`. To roll back: `mv ~/.openclaw/openclaw.json.bak-maxbridge-<date> ~/.openclaw/openclaw.json` then restart your OpenClaw gateway.
+
+**Uninstall.** Run this:
+
+```bash
+launchctl bootout "gui/$(id -u)/ai.maxbridge.proxy" 2>/dev/null
+rm -rf ~/.maxbridge ~/Library/LaunchAgents/ai.maxbridge.proxy.plist ~/Library/Logs/Maxbridge
+# Restore your openclaw.json from the backup if you want to unwire OpenClaw too:
+ls -1t ~/.openclaw/openclaw.json.bak-maxbridge-* 2>/dev/null | head -1 | xargs -I{} mv {} ~/.openclaw/openclaw.json
+```
 
 ## Architecture
 
