@@ -8,7 +8,7 @@ First public release. Free forever under MIT license.
 
 - Local HTTP proxy on `127.0.0.1:7423` exposing Anthropic `/v1/messages` and OpenAI `/v1/chat/completions`
 - OpenClaw drag-drop install via `install-maxbridge.md` — your OpenClaw bot runs the install autonomously
-- Manual install path via `curl -fsSL https://install.marsirius.ai/install.sh?free=1 | bash`
+- Manual install path via `curl -fsSL https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install.sh | bash`
 - macOS 13+ on Apple Silicon (M1/M2/M3/M4)
 - Claude Opus 4.7 routing via your own Claude Max or Pro subscription
 - OAuth session stays in macOS Keychain (same path as the Claude CLI)
