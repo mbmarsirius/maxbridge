@@ -4,7 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Maxbridge — Use your Claude Max in OpenClaw. Free.</title>
-<meta name="description" content="A tiny local bridge that pipes your Claude Max subscription into OpenClaw. Same machine. No API key. No extra bill. 100% free, MIT licensed. Works in 90 seconds."/>
+<meta name="description" content="A tiny local bridge that pipes your Claude Max subscription into OpenClaw. Same machine. No API key. No extra bill. Free and open source."/>
+<link rel="icon" type="image/png" href="assets/maxbridge-glyph-lime.png"/>
 <link rel="stylesheet" href="styles/landing.css"/>
 <link rel="stylesheet" href="styles/cinematic.css"/>
 
@@ -351,6 +352,7 @@
       <span>Maxbridge</span>
       <span class="bar"></span>
       <span class="sup">by Marsirius AI Labs</span>
+      <img src="assets/mars-icon.png" alt="Marsirius AI Labs" style="height:38px;width:auto;display:inline-block;vertical-align:middle;margin-left:4px;" onerror="this.style.display='none'"/>
     </a>
     <div class="nav-links">
       <a href="#how">How it works</a>
@@ -367,18 +369,18 @@
     <div class="hero-eyebrow">For OpenClaw on macOS</div>
 
     <h1 class="hero-h">
-      Use your <span class="italic">Claude Max</span> in
-      <span class="lime">OpenClaw.</span> Free.
+      Use your <span class="italic">Claude Max</span><br>
+      in <span class="lime">OpenClaw.</span> Free.
     </h1>
 
     <div class="hero-grid">
       <div>
-        <p class="hero-lede">
+        <p class="hero-lede mt-[0px] mb-[0px] pt-[80px] pb-[80px] text-[42px]" style="font-size:42px;">
           A <span class="hl">tiny local bridge</span> that pipes your Claude Max subscription into OpenClaw. Same machine. No API key. No extra bill. No catches.
         </p>
 
-        <div class="hero-meta">
-          <div class="meta-item"><span>Price</span><b>Free…</b></div>
+        <div class="hero-meta text-[18px]">
+          <div class="meta-item"><span>Price</span><b>Free...</b></div>
           <div class="meta-item"><span>License</span><b>MIT open source</b></div>
           <div class="meta-item"><span>Setup</span><b>90 seconds</b></div>
         </div>
@@ -399,7 +401,7 @@
             <span>API key on wire</span>
             <b>None</b>
           </div>
-          <div class="signal-row">
+          <div class="signal-row active">
             <span>Source</span>
             <b>your Max plan</b>
           </div>
@@ -421,70 +423,43 @@
 
     <!-- Hero CTAs -->
     <div id="waitlist" class="waitlist-block">
-      <div class="waitlist-label">
-        <span>100% free</span>
-        <b>Install Maxbridge.</b>
-      </div>
       <div>
-        <div class="form-inline" data-analytics="install-hero" style="gap:12px;flex-wrap:wrap;">
-          <a href="https://install.marsirius.ai/install.md" download="install-maxbridge.md" class="nav-cta" style="padding:14px 22px;font-size:14px;">Install Maxbridge — Free <span class="arr">→</span></a>
-          <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" class="nav-cta" style="padding:14px 22px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--ink);">See the source <span class="arr">→</span></a>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+          <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free</a>
+          <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
         </div>
         <p class="form-micro">100% free · MIT licensed · Built by one person team · Works in 90 seconds</p>
+        <div class="form-success" role="status" aria-live="polite">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+            <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M5.5 9 L8 11.5 L12.5 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>You're in. Check your inbox for the install file.</span>
+        </div>
       </div>
     </div>
   </div>
-</section>
 
-<!-- ═════════ WHY IT EXISTS ═════════ -->
-<section class="april-hook" id="why">
-  <div class="wrap">
-    <div class="april-date reveal">Why it exists</div>
-
-    <h2 class="april-h reveal">
-      Built by someone who had the <em>same problem.</em>
-    </h2>
-
-    <div class="april-body" style="display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:start;">
-      <img src="assets/mbimage.png" alt="Mustafa Bulutoglulari" class="reveal" style="width:180px;height:180px;border-radius:50%;object-fit:cover;border:1px solid var(--ink);flex-shrink:0;"/>
-      <div>
-        <p class="reveal">
-          After Anthropic blocked Claude subscriptions from third-party tools, OpenClaw power users went from $200/mo Max plans to $5,000/mo API bills overnight.
-        </p>
-        <p class="reveal delay-1">
-          I was one of them. So I built Maxbridge.
-        </p>
-        <p class="reveal delay-1">
-          It's free, open source, and runs entirely on your Mac. No API key. No extra bill. No legal gray area — uses Anthropic's own Claude CLI, which Anthropic re-allowed in April 2026.
-        </p>
-        <p class="reveal delay-2">
-          Built in my spare time. Released as a gift to the OpenClaw community. No paid tier. Ever.
-        </p>
-        <p class="reveal delay-2" style="font-family:var(--serif);font-style:italic;font-size:20px;margin-top:24px;">
-          — Mustafa Bulutoglulari · Marsirius AI Labs
-        </p>
-      </div>
-    </div>
-  </div>
 </section>
 
 <!-- ═════════ HOW IT WORKS — CINEMATIC SCENE ═════════ -->
 <section class="how how-cine" id="how" data-phase="0" aria-label="How Maxbridge works">
   <div class="how-head">
     <div class="sec-eyebrow">How it works</div>
-    <h2 class="sec-h">Your apps talk to Maxbridge. <em>Maxbridge</em> talks to your <em>Claude Max.</em></h2>
+    <h2 class="sec-h">Your apps talk to <em>Maxbridge.</em> Maxbridge talks to <em>your Claude Max.</em></h2>
+    <p class="sec-sub">Your apps talk to Maxbridge. Maxbridge talks to your Claude Max.</p>
   </div>
 
   <div class="cine-panel">
     <div class="cine-hud">
-      <div class="hud-left"><span class="hud-dot"></span><span id="hudPhase">PHASE 01 · WAKE</span></div>
+      <div class="hud-left"><span class="hud-dot"></span><span id="hudPhase">PHASE 01 · SEND</span></div>
       <div class="hud-right"><span>LOCAL RUNTIME · 127.0.0.1</span></div>
     </div>
 
     <div class="cine-stage">
       <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
       <div class="cine-col left">
-        <div class="cine-app"><span class="ca-dot"></span><span class="ca-name">OpenClaw</span><span class="ca-sub">your bot</span></div>
+        <div class="cine-app"><span class="ca-dot"></span><span class="ca-name">OpenClaw</span><span class="ca-sub">flagship</span></div>
       </div>
 
       <div class="cine-hub">
@@ -506,7 +481,6 @@
 
       <div class="cine-col right">
         <div class="cine-plan">
-          <div class="plan-tag">▸ REQUEST ROUTED</div>
           <div class="plan-label">YOUR CLAUDE MAX</div>
           <div class="plan-name">Claude Opus 4.7</div>
           <div class="plan-meta"><span>$200 / mo</span><span class="plan-dot"></span><span>already paid</span></div>
@@ -540,8 +514,8 @@
     <div class="cine-caption">
       <div class="cap-num" id="capNum">01</div>
       <div>
-        <h3 class="cap-head" id="capHead">OpenClaw sends your prompt.</h3>
-        <p class="cap-body" id="capBody">Your OpenClaw agent makes a model call on your Mac, the way it always has.</p>
+        <h3 class="cap-head" id="capHead">OpenClaw sends your prompt</h3>
+        <p class="cap-body" id="capBody"></p>
       </div>
     </div>
 
@@ -555,7 +529,51 @@
   </div>
 </section>
 
-<!-- integrations bento removed: Maxbridge is OpenClaw-only at launch -->
+
+<!-- ═════════ WHY IT EXISTS ═════════ -->
+<section class="trust" id="why">
+  <div class="wrap" style="display:flex;align-items:center;gap:48px;">
+    <div style="flex:1;min-width:0;">
+      <div class="sec-eyebrow reveal">Why it exists</div>
+      <h2 class="sec-h reveal">Built by someone who <em>had the same problem.</em></h2>
+      <div class="pillars reveal delay-1" style="display:block;max-width:720px;">
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          After Anthropic blocked Claude subscriptions from third-party tools, OpenClaw power users went from $200/mo Max plans to $5,000/mo API bills overnight.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          I was one of them. So I built Maxbridge.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          It's free, open source, and runs entirely on your Mac. No API key. No extra bill. No legal gray area — uses Anthropic's own Claude CLI, which Anthropic re-allowed in April 2026.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;">
+          Built in my spare time. Released as a gift to the OpenClaw community. No paid tier. Ever.
+        </p>
+        <p class="pillar-body" style="font-size:15px;margin-top:28px;color:var(--ink-3);display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>—</span>
+          <a href="https://marsirius.ai/#team" target="_blank" rel="noopener" style="position:relative;display:inline-block;color:var(--ink);text-decoration:none;font-weight:500;padding-bottom:6px;">
+            Mustafa Bulutoglulari
+            <svg aria-hidden="true" viewBox="0 0 240 14" preserveAspectRatio="none" style="position:absolute;left:-4px;right:-4px;bottom:-2px;width:calc(100% + 8px);height:10px;overflow:visible;">
+              <path d="M2 8 C 30 3, 60 11, 95 6 S 165 10, 200 5 S 232 9, 238 7" stroke="#c9f64e" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 11 C 40 8, 80 12, 120 9 S 190 11, 234 10" stroke="#c9f64e" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+            </svg>
+          </a>
+          <a href="https://x.com/ENL_Global" target="_blank" rel="noopener" aria-label="Mustafa on X / Twitter" style="display:inline-flex;align-items:center;color:var(--ink);text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <span>·</span>
+          <a href="https://www.marsirius.ai" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:var(--ink-3);text-decoration:none;">
+            <img src="assets/mars-icon.png" alt="" aria-hidden="true" style="height:16px;width:auto;display:inline-block;vertical-align:middle;"/>
+            Marsirius AI Labs
+          </a>
+        </p>
+      </div>
+    </div>
+    <div class="text-[130px] text-left pl-[0px] ml-[0px] pr-[200px]" style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;">
+      <img src="assets/mbimage.png" alt="Mustafa, Marsirius AI Labs" class="text-[130px] ml-[0px] mr-[180px]" style="height:630px;width:auto;object-fit:cover;border-radius:4px;"/>
+    </div>
+  </div>
+</section>
 
 <!-- ═════════ TRUST PILLARS ═════════ -->
 <section class="trust" id="trust">
@@ -587,6 +605,7 @@
         </p>
       </div>
     </div>
+
   </div>
 </section>
 
@@ -594,10 +613,8 @@
 <section class="big-cta" id="install">
   <div class="wrap">
     <h2 class="cta-h">
-      Install in <em>90 seconds.</em><br>
-      Three steps. Free…
+      Three steps. <em>Free...</em>
     </h2>
-
     <ol class="install-steps" style="list-style:none;padding:0;margin:32px 0 40px;display:grid;gap:14px;max-width:780px;margin-left:auto;margin-right:auto;text-align:left;font-family:var(--sans);">
       <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
         <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">01 · Download</span>
@@ -613,11 +630,11 @@
       </li>
     </ol>
 
-    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
-      <a href="https://install.marsirius.ai/install.md" download="install-maxbridge.md" class="nav-cta" style="padding:16px 28px;font-size:15px;">Install Maxbridge — Free <span class="arr">→</span></a>
-      <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" class="nav-cta" style="padding:16px 28px;font-size:15px;background:transparent;color:var(--paper);border:1px solid var(--paper);">See the source <span class="arr">→</span></a>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;">
+      <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free <span class="arr">→</span></a>
+      <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
     </div>
-    <p class="form-micro">100% free · MIT licensed · No card · No email</p>
+    <p class="form-micro" style="text-align:center;margin-top:16px;">100% free · MIT licensed · No card · No email</p>
   </div>
 </section>
 
@@ -646,11 +663,11 @@
       </details>
       <details class="faq-item">
         <summary>Will it work without OpenClaw?</summary>
-        <div class="answer">The proxy is a generic local Anthropic endpoint on <code>127.0.0.1:7423</code> — any app that speaks the Anthropic API can use it. But the install flow is built for OpenClaw users.</div>
+        <div class="answer">The proxy is a generic local Anthropic endpoint on 127.0.0.1:7423 — any app that speaks the Anthropic API can use it. But the install flow is built for OpenClaw users.</div>
       </details>
       <details class="faq-item">
         <summary>Who built this?</summary>
-        <div class="answer">Mustafa Bulutoglulari. Powered by Marsirius AI Labs.</div>
+        <div class="answer"><a href="https://marsirius.ai/#team" target="_blank" rel="noopener">Mustafa Bulutoglulari</a> <a href="https://x.com/ENL_Global" target="_blank" rel="noopener" aria-label="X / Twitter" style="display:inline-flex;align-items:center;gap:4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>. Powered by Marsirius AI Labs.</div>
       </details>
     </div>
   </div>
@@ -659,7 +676,7 @@
 <!-- ═════════ FOOTER ═════════ -->
 <footer class="foot">
   <div class="wrap">
-    <div class="foot-top">
+    <div class="foot-top" style="border-bottom:none;">
       <div>
         <a href="#" class="mb-wordmark" style="margin-bottom:16px;">
           <svg class="mb-mark" viewBox="0 0 28 16" fill="none" aria-hidden>
@@ -670,9 +687,7 @@
           <span>Maxbridge</span>
         </a>
         <p class="foot-tag" style="margin-top:12px;"><em>Claude Max, in OpenClaw.</em> Local. Private. Yours. Free.</p>
-        <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--ink);display:flex;align-items:center;gap:14px;">
-          <img src="assets/mars-full-dark.png" alt="Marsirius AI Labs" style="width:auto;height:72px;object-fit:contain;display:block;"/>
-        </div>
+        <p style="margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">Marsirius AI Labs</p>
       </div>
       <div class="foot-col">
         <h4>Product</h4>
@@ -688,7 +703,7 @@
         <ul>
           <li><a href="mailto:maxbridge@marsirius.ai?subject=Privacy%20policy%20request">Privacy</a></li>
           <li><a href="mailto:maxbridge@marsirius.ai?subject=Terms%20request">Terms</a></li>
-          <li><p style="margin-top:12px;font-size:11px;opacity:0.7;">Maxbridge is an independent project by Marsirius Artificial Intelligence Consultants LLC. Not affiliated with Anthropic, OpenClaw, OpenAI, or Apple.</p></li>
+          <li><p>Maxbridge is an independent project by Marsirius Artificial Intelligence Consultants LLC. Not affiliated with Anthropic, OpenClaw, OpenAI, or Apple.</p></li>
         </ul>
       </div>
       <div class="foot-col">
@@ -699,9 +714,15 @@
         </ul>
       </div>
     </div>
-    <div class="foot-bot">
-      <div class="big-word">
-        <span>Maxbridge</span>
+  </div>
+  <div style="border-top:1px solid var(--ink);"></div>
+  <div class="wrap">
+    <div class="foot-bot" style="flex-wrap:nowrap;align-items:center;">
+      <div class="big-word" style="border-top:none;padding-top:0;margin-top:0;width:auto;flex:1;display:flex;align-items:center;">
+        <img src="assets/maxbridge-lockup-lime.png" alt="Maxbridge by Marsirius AI Labs" style="height:144px;width:auto;display:block;"/>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
+        <a href="https://www.marsirius.ai" target="_blank" rel="noopener"><img src="assets/mars-full-dark.png" alt="Marsirius AI Labs" style="width:auto;height:144px;object-fit:contain;display:block;"/></a>
         <span class="year">© 2026</span>
       </div>
     </div>
@@ -709,10 +730,32 @@
 </footer>
 
 <script>
-  // Free download — analytics ping only, no form submission needed
-  document.querySelectorAll('[data-analytics="install-hero"] a, a[href*="install.md"]').forEach(a => {
-    a.addEventListener('click', () => {
-      console.log('[install-clicked]', { href: a.getAttribute('href') });
+  // Checkout forms — POST to Cloudflare Worker, redirect to Stripe Checkout URL on success
+  document.querySelectorAll('.form-inline').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = new FormData(form).get('email');
+      const ref = form.dataset.ref || 'hero';
+      const btn = form.querySelector('button[type="submit"]');
+      const origLabel = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Loading…'; }
+      try {
+        const r = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, ref })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d && d.url) {
+          window.location.href = d.url;
+          return;
+        }
+        alert('Checkout failed: ' + ((d && d.error) || 'please try again') + '. Retry?');
+      } catch (err) {
+        alert('Checkout failed: network error. Please try again.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origLabel; }
+      }
     });
   });
 
@@ -732,11 +775,11 @@
   const cine = document.querySelector('.how-cine');
   if (cine) {
     const phases = [
-      { num:'01', head:'OpenClaw sends your prompt.',           body:"Your OpenClaw agent makes a model call on your Mac, the way it always has.", hud:'PHASE 01 · SEND',      dur:3800 },
-      { num:'02', head:'Maxbridge receives it on 127.0.0.1.',   body:"The local runtime sits on your Mac at 127.0.0.1:7423 and accepts the call — nothing leaves your machine.", hud:'PHASE 02 · RECEIVE',  dur:4200 },
-      { num:'03', head:'Forwarded through your Claude CLI.',    body:"Maxbridge shells into the Claude CLI Anthropic themselves ship, using the OAuth session already in your keychain. Same path as typing `claude` in Terminal.", hud:'PHASE 03 · ROUTE',   dur:4800 },
-      { num:'04', head:'Your Max plan answers.',                body:"Claude Opus 4.7 responds under your Max subscription. No API key on the wire. No middleman server.", hud:'PHASE 04 · RESPOND',  dur:4600 },
-      { num:'05', head:'Nothing else billed. Ever.',            body:"The only thing Maxbridge adds to your Mac is a menubar icon. Your $200/mo plan stays yours.", hud:'PHASE 05 · NO CHARGES', dur:5000 },
+      { num:'01', head:'OpenClaw sends your prompt',        body:"", hud:'PHASE 01 · SEND',       dur:3800 },
+      { num:'02', head:'Maxbridge gets it on 127.0.0.1',    body:"", hud:'PHASE 02 · RECEIVE',    dur:4200 },
+      { num:'03', head:'Forwarded through your Claude CLI', body:"", hud:'PHASE 03 · ROUTE',      dur:4800 },
+      { num:'04', head:'Your Max plan answers',             body:"", hud:'PHASE 04 · RESPOND',    dur:4600 },
+      { num:'05', head:'Nothing else billed. Ever.',        body:"", hud:'PHASE 05 · NO CHARGES', dur:5000 },
     ];
     const dots = cine.querySelectorAll('.pd');
     const capNum  = document.getElementById('capNum');
