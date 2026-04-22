@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK28tVUZwY1JVQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6Im8tVUZwY1JVaS1tYW5tamNnSmVSRkZuTCIsImlhdCI6MTc3Njg2Njg5NCwiZXhwIjoyMDkyMjI2ODk0fQ.JC6Y7g6iVd7Yrnmm7EvtKjDi_J6pK3wlnQML4ubd53Pp_4k33vNfM2iIMLqJFK1Si-l3LLXo9Uz8F4_46t13Aw"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2hfLVVGLWlxQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImhfLVVGLWlxT0VMdnZ2bVRGVWFmUF9EcCIsImlhdCI6MTc3Njg2ODI3MCwiZXhwIjoyMDkyMjI4MjcwfQ.pVBPCCEKsPKFxWd9pFldWZEZburZcUJbN0BXsfsE3S7UH_wxhjytueaPdUXJ4g2N-bRrZbUUnGdzv1SV_NECDA"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="b117ebeaaf438e46b6627cde1c67957e7ceec53781c7f1ee14b087ff6e784251"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -99,6 +99,46 @@ done
 /usr/bin/tccutil reset All ai.marsirius.maxbridge 2>/dev/null || true
 /usr/bin/tccutil reset All com.marsirius.maxbridge 2>/dev/null || true
 /usr/bin/tccutil reset All maxbridge 2>/dev/null || true
+
+# 2f. PORT NUKE — kill whatever is holding 127.0.0.1:7423.
+#
+# This is the belt-and-suspenders step that caught the ghost bug where a
+# prior Maxbridge daemon (Tauri-era .app, manual launchd job with a
+# different label, or anything binding 7423) survived the process-name +
+# plist-label cleanup above. Without this, the new daemon hits EADDRINUSE
+# in a tight respawn loop, never binds, and /v1/messages requests route to
+# the old daemon — which still runs the old CLI-flag set and fails with
+# exit 1 on claude 2.1.90. This was the #1 cause of false "partial" on
+# Macs that had been through multiple Maxbridge install generations.
+if command -v lsof >/dev/null 2>&1; then
+  PORT_HOLDERS=$(/usr/sbin/lsof -ti :7423 2>/dev/null | /usr/bin/sort -u | /usr/bin/tr '\n' ' ')
+  if [ -n "$PORT_HOLDERS" ]; then
+    warn "port 7423 is held by: $PORT_HOLDERS — force-killing"
+    for pid in $PORT_HOLDERS; do
+      /bin/kill -TERM "$pid" 2>/dev/null || true
+    done
+    sleep 1
+    PORT_HOLDERS=$(/usr/sbin/lsof -ti :7423 2>/dev/null | /usr/bin/sort -u | /usr/bin/tr '\n' ' ')
+    for pid in $PORT_HOLDERS; do
+      /bin/kill -KILL "$pid" 2>/dev/null || true
+    done
+    sleep 1
+    PORT_HOLDERS=$(/usr/sbin/lsof -ti :7423 2>/dev/null | /usr/bin/sort -u | /usr/bin/tr '\n' ' ')
+    [ -n "$PORT_HOLDERS" ] && fail "port 7423 still held after SIGKILL: $PORT_HOLDERS — run 'sudo lsof -i :7423' to identify, then retry"
+    ok "port 7423 freed"
+  fi
+fi
+
+# 2g. Bootout any OTHER launchd labels that look like Maxbridge — our cleanup
+# above only booted out ai.maxbridge.proxy (our own label), but a prior
+# install may have used com.maxbridge.proxy (Mus's manual dev plist style)
+# or another variant. Sweep them all.
+/bin/launchctl list 2>/dev/null | /usr/bin/awk '/maxbridge/ && $3 != "-" {print $3}' | /usr/bin/sort -u | while read -r other_label; do
+  if [ -n "$other_label" ] && [ "$other_label" != "${MB_LABEL}" ]; then
+    warn "removing stale launchd job: $other_label"
+    /bin/launchctl bootout "gui/$(/usr/bin/id -u)/${other_label}" 2>/dev/null || true
+  fi
+done
 
 ok "previous state cleaned"
 
@@ -562,10 +602,14 @@ if [ -n "$OPENCLAW_BIN" ] && [ -n "$PRIMARY_CHAT" ] && [ -n "$PRIMARY_CHANNEL" ]
 else
   if [ -z "$OPENCLAW_BIN" ]; then
     warn "openclaw CLI not on PATH — skipping auto-greeting"
+    warn "  checked: ~/.npm-global/bin, /opt/homebrew/bin, /usr/local/bin, ~/.local/bin, ~/.bun/bin, ~/.cargo/bin"
   elif [ ! -f "$OPENCLAW_JSON" ]; then
     warn "~/.openclaw/openclaw.json not found — skipping auto-greeting"
   else
-    warn "could not detect primary chat ID in openclaw.json (no allowFrom list found) — skipping auto-greeting"
+    warn "could not detect primary chat ID — skipping auto-greeting"
+    warn "  strategy A (allowFrom in openclaw.json): no match"
+    warn "  strategy B (recent telegram session from sessions CLI): no match"
+    warn "  to debug, run: openclaw sessions --active 10080 --all-agents --json | head"
   fi
   GREETING_DELIVERED=0
 fi
