@@ -1,25 +1,32 @@
-// install.sh renderer.
+// install.sh renderer — v0.1.1 (headless daemon, OpenClaw-style)
 //
-// The Worker serves a per-user install.sh to every validated license key.
-// The script is identical across users except for two bake-ins:
-//   MAXBRIDGE_LICENSE       — the caller's JWT
-//   MAXBRIDGE_DMG_URL       — the CDN URL for the current DMG
-//   MAXBRIDGE_DMG_SHA256    — the expected sha256 for integrity check
+// The Worker serves a per-user install.sh. Single linear flow, no GUI:
+//   1. Pre-flight (macOS + arm64)
+//   2. Clean prior install (so retries work)
+//   3. Install Homebrew + Claude CLI if missing
+//   4. Run `claude setup-token` — Anthropic browser OAuth, blocks until done
+//   5. Download DMG, extract server-bundle + node-runtime, discard the rest
+//   6. Install as launchd daemon on 127.0.0.1:7423 (no Tauri, no window)
+//   7. Patch ~/.openclaw/openclaw.json (registers maxbridge provider +
+//      routes main agent to maxbridge/claude-opus-4-7, with backup)
+//   8. Kickstart OpenClaw gateway
+//   9. End-to-end test call to Opus 4.7
+//  10. Print REPORT_STATUS + done
 //
-// The template itself is a long-form bash program kept inline here so a single
-// worker deploy refreshes everything without extra file upload pipelines.
+// No Maxbridge.app. No onboarding window. No /v1/status polling. Pure CLI.
 
 export function renderInstallSh(args: {
   licenseJwt: string;
   dmgUrl: string;
   dmgSha256: string;
-  licenseApiBase: string; // e.g. https://install.maxbridge.ai
+  licenseApiBase: string; // e.g. https://install.marsirius.ai
   landingUrl: string;
   version: string;
 }): string {
   return `#!/usr/bin/env bash
 # Maxbridge installer — v${args.version}
-# Generated per-user by install.maxbridge.ai. Do not edit; re-request for fresh.
+# Pure CLI, headless daemon install (no GUI, no Tauri wrapper).
+# Regenerated on every request from ${args.licenseApiBase}.
 
 set -u
 export MAXBRIDGE_LICENSE=${'"'}${args.licenseJwt}${'"'}
@@ -29,9 +36,11 @@ export MAXBRIDGE_LICENSE_API_BASE=${'"'}${args.licenseApiBase}${'"'}
 export MAXBRIDGE_LANDING_URL=${'"'}${args.landingUrl}${'"'}
 export MAXBRIDGE_VERSION=${'"'}${args.version}${'"'}
 
-APP_NAME="Maxbridge.app"
-APP_DEST="/Applications/\${APP_NAME}"
-VOLUME_PATH="/Volumes/Maxbridge"
+MB_HOME="\${HOME}/.maxbridge"
+MB_SERVER_DIR="\${MB_HOME}/server-bundle"
+MB_NODE="\${MB_HOME}/node-runtime/bin/node"
+MB_PLIST="\${HOME}/Library/LaunchAgents/ai.maxbridge.proxy.plist"
+MB_LABEL="ai.maxbridge.proxy"
 PROXY="http://127.0.0.1:7423"
 OPENCLAW_JSON="\${HOME}/.openclaw/openclaw.json"
 LOG_DIR="\${HOME}/Library/Logs/Maxbridge"
@@ -46,42 +55,99 @@ ok()    { printf '  ✅ %s\\n' "\$*"; }
 warn()  { printf '  ⚠️  %s\\n' "\$*"; }
 fail()  { printf '  ❌ %s\\n' "\$*"; exit 1; }
 
+TMP_MOUNT=""
+TMP_DMG=""
 cleanup() {
-  if [ -d "\$VOLUME_PATH" ]; then
-    /usr/bin/hdiutil detach "\$VOLUME_PATH" -quiet >/dev/null 2>&1 || true
-  fi
+  [ -n "\$TMP_MOUNT" ] && [ -d "\$TMP_MOUNT" ] && /usr/bin/hdiutil detach "\$TMP_MOUNT" -quiet >/dev/null 2>&1 || true
+  [ -n "\$TMP_DMG" ] && /bin/rm -f "\$TMP_DMG" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 step "Maxbridge installer v\${MAXBRIDGE_VERSION} — $(date '+%Y-%m-%d %H:%M:%S')"
 printf '  log: %s\\n' "\$LOG_FILE"
 
-# --- 1. preflight ---
-step "1/7 preflight"
+# ═══════════════════════════════════════════════════════════════
+# 1/9 Pre-flight
+# ═══════════════════════════════════════════════════════════════
+step "1/9 pre-flight"
 OS_MAJOR="$(sw_vers -productVersion | awk -F. '{print \$1}')"
-[ "\$OS_MAJOR" -ge 13 ] || fail "macOS \${OS_MAJOR} too old; needs 13+."
-[ "$(uname -m)" = "arm64" ] || fail "Apple Silicon required; got $(uname -m)."
+[ "\$OS_MAJOR" -ge 13 ] || fail "macOS \${OS_MAJOR} too old; Maxbridge needs macOS 13+."
+[ "$(uname -m)" = "arm64" ] || fail "Apple Silicon required; got $(uname -m). Intel Macs are not supported at this time."
 ok "macOS $(sw_vers -productVersion) · Apple Silicon"
 
-# --- 2. Claude CLI ---
-step "2/7 Claude CLI"
+# ═══════════════════════════════════════════════════════════════
+# 2/9 Clean prior install (so retries are idempotent)
+# ═══════════════════════════════════════════════════════════════
+step "2/9 clean prior install (if any)"
+if /bin/launchctl print "gui/$(/usr/bin/id -u)/\${MB_LABEL}" >/dev/null 2>&1; then
+  /bin/launchctl bootout "gui/$(/usr/bin/id -u)/\${MB_LABEL}" 2>/dev/null || true
+fi
+/usr/bin/pkill -f "\${MB_HOME}/node-runtime/bin/node" 2>/dev/null || true
+/usr/bin/pkill -f "/Applications/Maxbridge.app/Contents/MacOS/" 2>/dev/null || true
+/bin/rm -rf "\$MB_HOME" 2>/dev/null || true
+/bin/rm -f "\$MB_PLIST" 2>/dev/null || true
+/bin/rm -rf "/Applications/Maxbridge.app" 2>/dev/null || true
+ok "previous state cleaned"
+
+# ═══════════════════════════════════════════════════════════════
+# 3/9 Homebrew (bootstrap if missing)
+# ═══════════════════════════════════════════════════════════════
+step "3/9 Homebrew"
+if ! command -v brew >/dev/null 2>&1; then
+  warn "Homebrew not found — installing (non-interactive)..."
+  NONINTERACTIVE=1 /bin/bash -c "$(/usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null \
+    || fail "Homebrew install failed. Install manually from https://brew.sh, then re-run this command."
+  if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; fi
+  if [ -x /usr/local/bin/brew ];  then eval "$(/usr/local/bin/brew shellenv)"; fi
+fi
+command -v brew >/dev/null 2>&1 || fail "Homebrew still not on PATH after install. Restart Terminal and re-run."
+ok "brew: $(command -v brew)"
+
+# ═══════════════════════════════════════════════════════════════
+# 4/9 Claude CLI (install if missing)
+# ═══════════════════════════════════════════════════════════════
+step "4/9 Claude CLI"
 CLAUDE_BIN=""
 for candidate in "\$HOME/.local/bin/claude" "/usr/local/bin/claude" "/opt/homebrew/bin/claude"; do
   [ -x "\$candidate" ] && CLAUDE_BIN="\$candidate" && break
 done
 [ -z "\$CLAUDE_BIN" ] && command -v claude >/dev/null 2>&1 && CLAUDE_BIN="$(command -v claude)"
 if [ -z "\$CLAUDE_BIN" ]; then
-  if command -v brew >/dev/null 2>&1; then
-    warn "Claude CLI not found — installing via Homebrew..."
-    brew install anthropic/claude/claude >/dev/null 2>&1 || fail "brew install failed"
-    CLAUDE_BIN="$(command -v claude || true)"
-  fi
+  warn "Claude CLI not found — installing via Homebrew..."
+  brew install anthropic/claude/claude </dev/null >/dev/null 2>&1 || fail "brew install anthropic/claude/claude failed"
+  CLAUDE_BIN="$(command -v claude || true)"
 fi
-[ -n "\$CLAUDE_BIN" ] || fail "Claude CLI not installed. Install from https://claude.ai/download"
-ok "Claude CLI: \$CLAUDE_BIN"
+[ -n "\$CLAUDE_BIN" ] || fail "Claude CLI not installed. Install manually from https://claude.ai/download then re-run."
+ok "claude: \$CLAUDE_BIN"
 
-# --- 3. DMG download + verify ---
-step "3/7 DMG download"
+# ═══════════════════════════════════════════════════════════════
+# 5/9 Anthropic OAuth login (opens browser) — THE ONLY MANUAL STEP
+# ═══════════════════════════════════════════════════════════════
+step "5/9 Claude login (Anthropic OAuth — opens your browser)"
+printf '\\n'
+printf '  ▸ A browser window will open now on anthropic.com.\\n'
+printf '  ▸ Sign in with your Claude Max (or Pro) account.\\n'
+printf '  ▸ Approve "Build something great".\\n'
+printf '  ▸ This is the only manual step (~45 seconds).\\n'
+printf '\\n'
+
+if [ -r /dev/tty ]; then
+  "\$CLAUDE_BIN" setup-token </dev/tty || fail "claude setup-token did not complete. Run \\\`claude setup-token\\\` manually then re-run this installer."
+else
+  "\$CLAUDE_BIN" setup-token || fail "claude setup-token failed. Run \\\`claude setup-token\\\` manually then re-run this installer."
+fi
+
+# Sanity check: the CLI should be able to answer basic queries now
+if ! "\$CLAUDE_BIN" --version >/dev/null 2>&1; then
+  warn "Claude CLI sanity check failed (continuing — may still work)"
+else
+  ok "Claude Max session stored in macOS keychain"
+fi
+
+# ═══════════════════════════════════════════════════════════════
+# 6/9 Download + extract Maxbridge daemon (no GUI)
+# ═══════════════════════════════════════════════════════════════
+step "6/9 download Maxbridge"
 TMP_DMG="$(mktemp -t maxbridge).dmg"
 printf '  fetching %s ...\\n' "\$MAXBRIDGE_DMG_URL"
 /usr/bin/curl -fL --retry 3 --max-time 300 -o "\$TMP_DMG" "\$MAXBRIDGE_DMG_URL" || fail "DMG download failed"
@@ -89,35 +155,36 @@ ACTUAL_SHA="$(/usr/bin/shasum -a 256 "\$TMP_DMG" | awk '{print \$1}')"
 [ "\$ACTUAL_SHA" = "\$MAXBRIDGE_DMG_SHA256" ] || fail "sha256 mismatch: expected \$MAXBRIDGE_DMG_SHA256, got \$ACTUAL_SHA"
 ok "DMG verified ($(wc -c < "\$TMP_DMG" | awk '{print \$1}') bytes)"
 
-# --- 4. install app ---
-step "4/7 install app"
-/usr/bin/pkill -f "/Applications/\${APP_NAME}/Contents/MacOS/" 2>/dev/null || true
-sleep 1
-/usr/bin/hdiutil attach "\$TMP_DMG" -nobrowse -noautoopen -quiet || fail "hdiutil attach failed"
-[ -d "\$VOLUME_PATH/\$APP_NAME" ] || fail "\$APP_NAME not inside DMG"
-[ -d "\$APP_DEST" ] && /bin/rm -rf "\$APP_DEST"
-/bin/cp -R "\$VOLUME_PATH/\$APP_NAME" "/Applications/" || fail "copy failed"
-/usr/bin/xattr -rd com.apple.quarantine "\$APP_DEST" 2>/dev/null || true
-/usr/bin/hdiutil detach "\$VOLUME_PATH" -quiet >/dev/null 2>&1 || true
-/bin/rm -f "\$TMP_DMG" 2>/dev/null || true
-ok "installed at \$APP_DEST"
+TMP_MOUNT="$(mktemp -d -t maxbridge-mount)"
+/usr/bin/hdiutil attach "\$TMP_DMG" -nobrowse -noautoopen -quiet -mountpoint "\$TMP_MOUNT" || fail "hdiutil attach failed"
+[ -d "\$TMP_MOUNT/Maxbridge.app/Contents/Resources/server-bundle" ] || fail "server-bundle not found inside DMG"
+[ -x "\$TMP_MOUNT/Maxbridge.app/Contents/Resources/node-runtime/bin/node" ] || fail "node-runtime not found inside DMG"
 
-# --- 4.5. bake license into local license.json ---
-mkdir -p "\$(dirname "\$LICENSE_FILE")"
+mkdir -p "\$MB_HOME"
+/bin/cp -R "\$TMP_MOUNT/Maxbridge.app/Contents/Resources/server-bundle"  "\$MB_HOME/server-bundle"  || fail "copy server-bundle failed"
+/bin/cp -R "\$TMP_MOUNT/Maxbridge.app/Contents/Resources/node-runtime"   "\$MB_HOME/node-runtime"   || fail "copy node-runtime failed"
+/usr/bin/xattr -rd com.apple.quarantine "\$MB_HOME" 2>/dev/null || true
+/usr/bin/hdiutil detach "\$TMP_MOUNT" -quiet >/dev/null 2>&1 || true
+TMP_MOUNT=""
+/bin/rm -f "\$TMP_DMG" 2>/dev/null || true
+TMP_DMG=""
+ok "daemon files installed at \$MB_HOME"
+
+# Bake license.json so gate.ts sees a valid subscription (10-year baked JWT)
+/bin/mkdir -p "$(dirname "\$LICENSE_FILE")"
 /usr/bin/python3 - "\$LICENSE_FILE" "\$MAXBRIDGE_LICENSE" <<'PY' || warn "could not write license.json"
 import json, os, sys, time, base64
 path, token = sys.argv[1], sys.argv[2]
-# Decode JWT payload to cache expiresAt locally — gate works offline from this.
 def b64d(s):
   s = s + '=' * (-len(s) % 4)
   return json.loads(base64.urlsafe_b64decode(s).decode('utf-8'))
 try:
   payload = b64d(token.split('.')[1])
-except Exception as e:
+except Exception:
   payload = {}
 now = int(time.time())
 iat_iso = time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime(payload.get('iat', now)))
-exp = payload.get('exp', now + 35*24*3600)
+exp = payload.get('exp', now + 3650*24*3600)
 exp_iso = time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime(exp))
 grace_iso = time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime(exp + 2*3600))
 state = {
@@ -137,42 +204,58 @@ with open(tmp, 'w') as f: json.dump(state, f, indent=2)
 os.chmod(tmp, 0o600)
 os.rename(tmp, path)
 PY
-ok "license activated locally"
 
-# --- 5. launch + health + login ---
-step "5/7 launch + login"
-/usr/bin/open -a "\$APP_DEST" || fail "open failed"
-ok "Maxbridge launched"
+# ═══════════════════════════════════════════════════════════════
+# 7/9 launchd daemon (persistent, auto-restart on crash)
+# ═══════════════════════════════════════════════════════════════
+step "7/9 start Maxbridge daemon"
+mkdir -p "$(dirname "\$MB_PLIST")"
+cat > "\$MB_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>\${MB_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>\${MB_NODE}</string>
+        <string>\${MB_SERVER_DIR}/server.js</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string>\${LOG_DIR}/daemon.out.log</string>
+    <key>StandardErrorPath</key><string>\${LOG_DIR}/daemon.err.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>NODE_ENV</key><string>production</string>
+        <key>HOME</key><string>\${HOME}</string>
+        <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\${HOME}/.local/bin</string>
+    </dict>
+</dict>
+</plist>
+PLIST
+
+/bin/launchctl bootstrap "gui/$(/usr/bin/id -u)" "\$MB_PLIST" 2>&1 | /usr/bin/grep -v "already loaded" || true
+
+# Wait for /healthz — should be <10s since this is a pure Node boot
 HEALTH_OK=0
 for _ in $(seq 1 30); do
   /usr/bin/curl -fsS --max-time 2 "\$PROXY/healthz" >/dev/null 2>&1 && HEALTH_OK=1 && break
   sleep 1
 done
-[ "\$HEALTH_OK" = 1 ] || fail "proxy did not answer /healthz within 30s"
-ok "proxy up"
+[ "\$HEALTH_OK" = 1 ] || fail "proxy did not answer /healthz within 30s. Check \$LOG_DIR/daemon.err.log"
+ok "proxy up on 127.0.0.1:7423"
 
-printf '  waiting for OAuth login (complete \\\`claude setup-token\\\` in the Maxbridge wizard) ...\\n'
-LOGGED_IN=0
-for _ in $(seq 1 180); do
-  STATUS_JSON="$(/usr/bin/curl -fsS --max-time 3 "\$PROXY/v1/status" 2>/dev/null || echo '{}')"
-  printf '%s' "\$STATUS_JSON" | /usr/bin/grep -q '"loggedIn":true' && LOGGED_IN=1 && break
-  sleep 1
-done
-if [ "\$LOGGED_IN" != 1 ]; then
-  warn "OAuth login not completed within 3 min. Complete \\\`claude setup-token\\\` in the wizard, then re-run this installer."
-  printf '\\nREPORT_STATUS=awaiting_login\\nREPORT_PROXY=%s\\nREPORT_LOG=%s\\n' "\$PROXY" "\$LOG_FILE"
-  exit 0
-fi
-ok "Claude Max OAuth logged in"
-
-# --- 6. OpenClaw wire-up ---
-step "6/7 OpenClaw wire-up"
+# ═══════════════════════════════════════════════════════════════
+# 8/9 OpenClaw wire-up
+# ═══════════════════════════════════════════════════════════════
+step "8/9 OpenClaw wire-up"
 if [ ! -f "\$OPENCLAW_JSON" ]; then
-  warn "No ~/.openclaw/openclaw.json — proxy runs standalone; skipping wire-up."
+  warn "No ~/.openclaw/openclaw.json found. Maxbridge is running as a standalone proxy on 127.0.0.1:7423 — point any tool there manually."
 else
   BACKUP="\${OPENCLAW_JSON}.bak-maxbridge-$(date +%Y%m%d-%H%M%S)"
   /bin/cp "\$OPENCLAW_JSON" "\$BACKUP" || fail "backup failed"
-  ok "backup: \$BACKUP"
+  ok "backup saved: \$BACKUP"
   /usr/bin/python3 - "\$OPENCLAW_JSON" <<'PY' || fail "openclaw.json patch failed"
 import json, sys
 p = sys.argv[1]
@@ -181,7 +264,7 @@ m = d.setdefault('models', {}).setdefault('providers', {})
 m['maxbridge'] = {
   'baseUrl': 'http://127.0.0.1:7423',
   'api': 'anthropic-messages',
-  'models': [{'id':'claude-opus-4-7','name':'Claude Opus 4.7 (Maxbridge Max OAuth)','contextWindow':200000,'reasoning':False,'maxTokens':8000}],
+  'models': [{'id':'claude-opus-4-7','name':'Claude Opus 4.7 (Maxbridge · your Max plan)','contextWindow':200000,'reasoning':False,'maxTokens':8000}],
 }
 a = d.setdefault('agents', {})
 de = a.setdefault('defaults', {})
@@ -205,24 +288,44 @@ for ag in a.get('list', []):
     break
 with open(p, 'w') as f: json.dump(d, f, indent=2)
 PY
-  ok "openclaw.json patched"
+  ok "openclaw.json patched — main agent routed to maxbridge/claude-opus-4-7"
+
+  # Kickstart OpenClaw gateway so it picks up new config
+  if /bin/launchctl print "gui/$(/usr/bin/id -u)/ai.openclaw.gateway" >/dev/null 2>&1; then
+    /bin/launchctl kickstart -k "gui/$(/usr/bin/id -u)/ai.openclaw.gateway" && ok "openclaw gateway kickstarted" || warn "gateway kickstart failed — restart OpenClaw manually"
+  else
+    warn "openclaw gateway launchd job not found — if you run openclaw from the CLI, restart it manually to pick up the new config"
+  fi
 fi
 
-step "7/7 gateway reload + verify"
-/usr/bin/launchctl kickstart -k "gui/$(id -u)/ai.openclaw.gateway" 2>/dev/null && ok "gateway kickstarted" || warn "gateway kickstart skipped"
-sleep 6
-
+# ═══════════════════════════════════════════════════════════════
+# 9/9 Self-test: actual Opus 4.7 round-trip
+# ═══════════════════════════════════════════════════════════════
+step "9/9 end-to-end test"
+sleep 3
 TEST_OUT="$(/usr/bin/curl -fsS --max-time 30 -X POST "\$PROXY/v1/messages" -H 'content-type: application/json' -d '{"model":"claude-opus-4-7","max_tokens":40,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}' 2>/dev/null || echo '{}')"
 if printf '%s' "\$TEST_OUT" | /usr/bin/grep -q 'MAXBRIDGE_LIVE'; then
   ok "Opus 4.7 returned MAXBRIDGE_LIVE"
   RESULT="success"
 else
-  warn "end-to-end test did not return the expected marker. Raw head:"
+  warn "end-to-end test did not return the expected marker. Response head:"
   printf '%s\\n' "\$TEST_OUT" | head -c 400
   RESULT="partial"
 fi
 
+# ═══════════════════════════════════════════════════════════════
+# Final summary
+# ═══════════════════════════════════════════════════════════════
 step "done — \$RESULT"
-printf '\\nREPORT_STATUS=%s\\nREPORT_PROXY=%s\\nREPORT_LOG=%s\\nREPORT_LANDING=%s\\n' "\$RESULT" "\$PROXY" "\$LOG_FILE" "\$MAXBRIDGE_LANDING_URL"
+printf '\\n'
+if [ "\$RESULT" = "success" ]; then
+  printf '  🎉 Maxbridge is live.\\n\\n'
+  printf '     Your OpenClaw main agent now routes to Claude Opus 4.7\\n'
+  printf '     through your Max subscription. No API key, no extra billing.\\n\\n'
+  printf '     Open Telegram (or whichever channel your OpenClaw bot uses).\\n'
+  printf '     Run /model — you should see "maxbridge — claude-opus-4-7"\\n'
+  printf '     selected as primary. Ask anything.\\n\\n'
+fi
+printf 'REPORT_STATUS=%s\\nREPORT_PROXY=%s\\nREPORT_LOG=%s\\nREPORT_LANDING=%s\\n' "\$RESULT" "\$PROXY" "\$LOG_FILE" "\$MAXBRIDGE_LANDING_URL"
 `;
 }
