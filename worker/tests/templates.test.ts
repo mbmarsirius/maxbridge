@@ -22,8 +22,10 @@ describe('renderInstallSh', () => {
     });
     expect(sh.startsWith('#!/usr/bin/env bash')).toBe(true);
     expect(sh).toContain('export MAXBRIDGE_LICENSE="JWT_FAKE_12345"');
-    expect(sh).toContain('export MAXBRIDGE_DMG_URL="https://cdn.example/Maxbridge.dmg"');
-    expect(sh).toContain('export MAXBRIDGE_DMG_SHA256="abc123def456"');
+    // v0.1.1+ ships the daemon as a tarball pinned to the GitHub release. The
+    // caller-supplied dmgUrl is retained in the renderInstallSh signature for
+    // backwards compatibility but is no longer embedded in the script.
+    expect(sh).toContain('maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz');
     expect(sh).toContain('REPORT_STATUS=%s');
   });
 
@@ -58,7 +60,9 @@ describe('renderActivationMd', () => {
       supportEmail: 'founders@example.ai',
       issuedAt: '2026-04-21T10:00:00Z',
     });
-    expect(md).toContain('https://install.example/v0.1.0?key=JWT_TOKEN_HERE');
+    // v0.1.1: install URL uses the /install.sh?key=... shape (the Worker serves
+    // the dynamic per-user installer at /install.sh, not at root).
+    expect(md).toContain('https://install.example/v0.1.0/install.sh?key=JWT_TOKEN_HERE');
     expect(md).toContain('JWT_TOKEN_HERE');
     expect(md).toContain('jti_short');
     expect(md).toContain('Hello Alice!');

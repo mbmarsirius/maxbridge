@@ -6,7 +6,7 @@
 // `claude -p --model opus`). It is NOT portable — another user on another
 // Mac needs their own `claude setup-token` session. See AUTH_REALITY.md.
 
-import { execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import type { RuntimeConfig } from './config.js';
 import type {
@@ -46,23 +46,69 @@ function run(
   timeoutMs: number,
 ): Promise<ExecResult> {
   return new Promise((resolve) => {
-    execFile(
-      file,
-      args,
-      { env, timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 },
-      (err, stdout, stderr) => {
-        resolve({
-          stdout: stdout ?? '',
-          stderr: stderr ?? '',
-          code: err && typeof (err as NodeJS.ErrnoException).code === 'number'
-            ? ((err as unknown as { code: number }).code ?? null)
-            : err
-              ? 1
-              : 0,
-          error: err ?? null,
-        });
-      },
-    );
+    // CRITICAL: stdin is 'ignore' (/dev/null), NOT 'pipe'.
+    //
+    // Claude CLI 2.1.90+ reads from stdin even when a prompt is passed via `-p`,
+    // and times out after ~3 seconds with "No stdin data received in 3s" if
+    // stdin is an open-but-empty pipe (the default for execFile/spawn).
+    // Binding stdin to /dev/null makes the child see immediate EOF on read,
+    // so the CLI proceeds with just the `-p` prompt and returns normally.
+    //
+    // This was the ghost bug behind REPORT_STATUS=partial on cold installs:
+    // /healthz + /v1/status returned OK (they don't spawn claude), but
+    // /v1/messages spawns claude and consistently dropped with the 3s timeout,
+    // making OpenClaw fall back to its non-Maxbridge models.
+    const child = spawn(file, args, {
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let exitSettled = false;
+    const MAX_STDOUT = 8 * 1024 * 1024;
+    const MAX_STDERR = 1 * 1024 * 1024;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try { child.kill('SIGTERM'); } catch { /* ignore */ }
+      // Hard-kill 2s later if the child ignored SIGTERM.
+      setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* ignore */ }
+      }, 2000);
+    }, timeoutMs);
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      if (stdout.length >= MAX_STDOUT) return;
+      const room = MAX_STDOUT - stdout.length;
+      const s = chunk.toString('utf8');
+      stdout += s.length <= room ? s : s.slice(0, room);
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      if (stderr.length >= MAX_STDERR) return;
+      const room = MAX_STDERR - stderr.length;
+      const s = chunk.toString('utf8');
+      stderr += s.length <= room ? s : s.slice(0, room);
+    });
+
+    const settle = (code: number | null, error: Error | null): void => {
+      if (exitSettled) return;
+      exitSettled = true;
+      clearTimeout(timer);
+      resolve({
+        stdout,
+        stderr,
+        code,
+        error: timedOut
+          ? new Error(`command timed out after ${timeoutMs}ms: ${file} ${args.join(' ')}`)
+          : error,
+      });
+    };
+
+    child.on('close', (code) => settle(code ?? null, null));
+    child.on('error', (err) => settle(null, err));
   });
 }
 
