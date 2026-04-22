@@ -647,13 +647,29 @@
       </div>
     </div>
 
-    <div style="max-width:640px;margin:28px auto 0;text-align:center;font-family:var(--mono);font-size:11.5px;line-height:1.8;letter-spacing:0.04em;color:rgba(241,236,226,0.56);">
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Installs Homebrew + Claude CLI if missing</div>
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Downloads Maxbridge binary, SHA256-verified</div>
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Runs <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">claude setup-token</code> — you log in once (~45s)</div>
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Patches <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">~/.openclaw/openclaw.json</code> with timestamped backup</div>
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Sets Opus 4.7 as default model + kickstarts OpenClaw gateway</div>
-      <div><span style="color:var(--lime);">✓</span> &nbsp;Self-tests end-to-end, exits <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">REPORT_STATUS=success</code></div>
+    <div style="max-width:720px;margin:28px auto 0;text-align:left;font-family:var(--sans);line-height:1.65;color:rgba(241,236,226,0.78);">
+      <p style="text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--lime);margin:0 0 20px 0;">What you'll see — step by step</p>
+
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:14px 18px;font-size:14px;">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--lime);white-space:nowrap;padding-top:2px;">0 · 10s</span>
+        <div><strong style="color:var(--paper);">Pre-flight + cleanup.</strong> Checks macOS 13+ and Apple Silicon. Removes any previous Maxbridge install.</div>
+
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--lime);white-space:nowrap;padding-top:2px;">10 · 40s</span>
+        <div><strong style="color:var(--paper);">Homebrew + Claude CLI.</strong> Installed silently if you don't already have them. On a fresh Mac with no brew, this step can take 2–3 minutes.</div>
+
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--lime);white-space:nowrap;padding-top:2px;">40 · 90s ★</span>
+        <div><strong style="color:var(--paper);">Your browser opens.</strong> You land on <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">anthropic.com</code> — sign in with your Claude Max or Pro account, click <strong>Approve</strong>. This is the <u>only manual step</u>. ~45 seconds. When the page says "success," close the tab and return to Terminal.</div>
+
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--lime);white-space:nowrap;padding-top:2px;">90 · 120s</span>
+        <div><strong style="color:var(--paper);">Daemon + wire-up.</strong> Maxbridge downloads (29 MB), SHA-verified, extracted into <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">~/.maxbridge/</code>, registered as a launchd service. Your <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">~/.openclaw/openclaw.json</code> gets patched (with a timestamped backup) to route your main agent to <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">maxbridge/claude-opus-4-7</code>.</div>
+
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.16em;color:var(--lime);white-space:nowrap;padding-top:2px;">120s</span>
+        <div><strong style="color:var(--paper);">Self-test passes.</strong> The installer does a real Opus 4.7 round-trip and prints <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">REPORT_STATUS=success</code>. Open Telegram (or whichever channel your OpenClaw bot uses) and send any message — the reply comes via your Max plan.</div>
+      </div>
+
+      <p style="margin-top:24px;padding:14px 18px;background:rgba(212,255,58,0.06);border-left:2px solid var(--lime);border-radius:2px;font-size:13px;color:rgba(241,236,226,0.72);">
+        <strong style="color:var(--paper);">Running on a Mac mini without a monitor?</strong> Step ★ opens a browser on the Mac's screen, so you'll need Screen Sharing / VNC / a physical display to click through the Anthropic login. After that the install is fully headless.
+      </p>
     </div>
 
     <p style="text-align:center;margin-top:30px;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:rgba(241,236,226,0.45);">
