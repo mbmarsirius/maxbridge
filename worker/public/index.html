@@ -433,7 +433,7 @@
             <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;color:rgba(241,236,226,0.5);">~90 seconds · no bot · no DMG</span>
           </div>
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-            <code id="install-cmd" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(14px, 1.6vw, 18px);color:var(--paper);letter-spacing:0.02em;padding:12px 0;">$ curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash</code>
+            <code id="install-cmd" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(14px, 1.6vw, 18px);color:var(--paper);letter-spacing:0.02em;padding:12px 0;">curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash</code>
             <button type="button" onclick="const t=document.getElementById('install-cmd').textContent.replace(/^\$\s*/,'');navigator.clipboard.writeText(t).then(()=>{this.textContent='✓ Copied';setTimeout(()=>{this.textContent='Copy';},2000);});" style="flex-shrink:0;background:var(--lime);color:var(--ink);border:none;padding:10px 22px;font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:6px;font-weight:700;">Copy</button>
           </div>
           <p style="margin:12px 0 0 0;font-family:var(--sans);font-size:13px;line-height:1.55;color:rgba(241,236,226,0.7);">
@@ -644,7 +644,7 @@
         <span style="margin-left:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;color:rgba(241,236,226,0.5);text-transform:uppercase;">Terminal · ~/</span>
       </div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <code id="install-cmd-2" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(15px, 1.8vw, 20px);color:var(--paper);letter-spacing:0.02em;">$ curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash</code>
+        <code id="install-cmd-2" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(15px, 1.8vw, 20px);color:var(--paper);letter-spacing:0.02em;">curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh | bash</code>
         <button type="button" onclick="const t=document.getElementById('install-cmd-2').textContent.replace(/^\$\s*/,'');navigator.clipboard.writeText(t).then(()=>{this.textContent='✓ Copied';setTimeout(()=>{this.textContent='Copy';},2000);});" style="flex-shrink:0;background:var(--lime);color:var(--ink);border:none;padding:11px 26px;font-family:var(--mono);font-size:13px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border-radius:6px;font-weight:700;">Copy</button>
       </div>
     </div>
