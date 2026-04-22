@@ -33,21 +33,32 @@ OpenClaw ──▶ Maxbridge (127.0.0.1:7423) ──▶ your Claude CLI ──�
 4. **Respond** — Claude Opus 4.7 responds under your Max subscription. No API key on the wire, no middleman server.
 5. **No charges** — the only thing Maxbridge adds to your Mac is a menu-bar icon.
 
-## Install (90 seconds)
+## Install (one paste, ~90 seconds)
 
-**The fast path — let your OpenClaw bot install it:**
-
-1. Download [**install-maxbridge.md**](https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md) (no card, no email).
-2. Drag the `.md` into your OpenClaw bot chat on the Mac where you run OpenClaw.
-3. Your bot reads the instruction and runs one `curl | bash`. Maxbridge downloads, installs, and asks you to complete `claude setup-token` in the browser (~45 seconds — the only manual step). When that's done, the bot wires up `~/.openclaw/openclaw.json`, kickstarts the OpenClaw gateway, and greets you on Opus 4.7.
-
-**The manual path** (if you prefer to install by hand):
+Paste this in your Mac's Terminal:
 
 ```bash
-curl -fsSL "https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install.sh" | bash
+curl -fsSL https://install.marsirius.ai | bash
 ```
 
-Either way you end on the same result: Maxbridge running locally at `127.0.0.1:7423`, OpenClaw routed through it, Opus 4.7 answering under your Max plan.
+That's the whole install. The script is idempotent — you can re-run it safely; step 2 auto-cleans any partial state from a prior attempt.
+
+**What happens, headlessly:**
+
+1. Pre-flight (macOS 13+, Apple Silicon)
+2. Cleans any partial prior install
+3. Installs Homebrew if missing
+4. Installs the Claude CLI via Homebrew if missing
+5. **Opens `anthropic.com` in your browser** for Claude login — you sign in to your Max plan and approve the authorization. This is the *only* manual step, ~45 seconds.
+6. Downloads + SHA256-verifies the Maxbridge daemon bundle; extracts Node runtime + server into `~/.maxbridge/` (no `.app`, no Applications folder, no GUI)
+7. Registers a `launchd` daemon (`ai.maxbridge.proxy`) — persistent background service on `127.0.0.1:7423`, auto-restarts on crash
+8. Patches `~/.openclaw/openclaw.json` (timestamped backup kept) — registers `maxbridge` as a provider, routes the main agent to `maxbridge/claude-opus-4-7`
+9. Kickstarts the OpenClaw gateway
+10. Self-tests with a real Opus 4.7 round-trip; prints `REPORT_STATUS=success`
+
+End state: Maxbridge running locally at `127.0.0.1:7423` as a background daemon, OpenClaw routed through it, Opus 4.7 answering under your Max plan.
+
+**Prefer to drag-drop into your bot chat?** Download [install-maxbridge.md](https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md) and drop it into your OpenClaw bot; it carries the same single command above. The bot just runs it for you. (Secondary path — the terminal one-paste above is the primary, bulletproof install.)
 
 ## Requirements
 
@@ -91,10 +102,14 @@ maxbridge/
 │   ├── openai-compat.ts  translates OpenAI ChatCompletions ↔ Anthropic Messages
 │   └── license/          pure license-gate decision + store + online poller
 │
-├── src-tauri/        Tauri (Rust) app shell — produces the DMG
-│   ├── src/main.rs       spawns the bundled Node server, exposes menubar
+├── src-tauri/        Legacy Tauri app shell — retained for the current DMG
+│   │                 build but NOT used at runtime. The installer extracts
+│   │                 just server-bundle/ + node-runtime/ into ~/.maxbridge/
+│   │                 and runs them headlessly via launchd. The DMG is a
+│   │                 transport format, not a user-facing app.
+│   ├── src/main.rs       legacy spawner (unused by v0.1.1 installer)
 │   ├── tauri.conf.json   bundle config
-│   └── icons/            app icon set (rendered from brand/maxbridge-appicon.svg)
+│   └── icons/            app icon set (used only for Finder preview of DMG)
 │
 ├── worker/           Cloudflare Worker — serves install.md + install.sh + static
 │   ├── src/              Hono router, JWT mint, md + sh template rendering
@@ -108,15 +123,14 @@ maxbridge/
                       design briefs for the landing + onboarding wizard
 ```
 
-**The install chain:**
+**The install chain (pure CLI, no GUI):**
 
-1. User clicks **Install Maxbridge — Free** on the landing → browser downloads `install-maxbridge.md` directly from the [GitHub release](https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0)
-2. User drags the `.md` into their OpenClaw bot chat. Bot reads the markdown and runs `curl -fsSL https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install.sh | bash`
-3. install.sh preflights the Mac, installs Claude CLI via Homebrew if missing, downloads + SHA256-verifies the DMG from the GitHub release, installs `/Applications/Maxbridge.app`, opens the wizard
-4. User completes `claude setup-token` in the browser (~45 seconds — the only manual step; Maxbridge never sees the OAuth token)
-5. install.sh patches `~/.openclaw/openclaw.json` (timestamped backup), kickstarts the OpenClaw gateway, runs an end-to-end test to Opus 4.7, prints `REPORT_STATUS=success`
+1. User pastes `curl -fsSL https://install.marsirius.ai | bash` in their Mac's Terminal (or clicks the button on the landing, or drops `install-maxbridge.md` into their OpenClaw bot — every path converges on this one command).
+2. `install.marsirius.ai/` 302-redirects to the static `install.sh` on the GitHub v0.1.0 release (zero DNS-propagation dependency — GitHub's global CDN).
+3. install.sh runs linearly: pre-flight → clean prior install → install Homebrew + Claude CLI if missing → `claude setup-token` (opens Anthropic browser login, the only manual step) → download + SHA256-verify the daemon bundle → extract into `~/.maxbridge/` → bootstrap the `launchd` daemon → patch `~/.openclaw/openclaw.json` (backup kept) → kickstart the OpenClaw gateway → end-to-end test → `REPORT_STATUS=success`.
+4. Maxbridge runs as a background daemon on `127.0.0.1:7423`. No `.app` in `/Applications`, no GUI onboarding, no menubar icon. Pure service. Your prompts never leave your Mac.
 
-Every asset (install.md, install.sh, DMG) is served from GitHub's global CDN, so the install works anywhere in the world with zero DNS-propagation dependencies. The Cloudflare Worker at `install.marsirius.ai` stays as a secondary mirror for the dynamic install path. Your prompts never leave your Mac.
+Everything is MIT-licensed and served from GitHub's release CDN (DMG, install.sh, install-maxbridge.md). The Cloudflare Worker at `install.marsirius.ai` exists only to provide the short `curl` URL — it redirects to the GitHub asset.
 
 ## Security
 
