@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Maxbridge — Use your Claude Max in OpenClaw. Free.</title>
+<meta name="description" content="A tiny local bridge that pipes your Claude Max subscription into OpenClaw. Same machine. No API key. No extra bill. Free and open source."/>
+<link rel="icon" type="image/png" href="assets/maxbridge-glyph-lime.png"/>
+<link rel="stylesheet" href="styles/landing.css"/>
+<link rel="stylesheet" href="styles/cinematic.css"/>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#050403"/>
+  <circle cx="70" cy="100" r="10" fill="#d4ff3a"/>
+  <circle cx="130" cy="100" r="10" fill="#d4ff3a"/>
+  <path d="M 70 100 Q 100 60 130 100" stroke="#d4ff3a" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <text x="100" y="150" text-anchor="middle" font-family="monospace" font-size="14" fill="#f1ece2" letter-spacing="3">MAXBRIDGE</text>
+</svg>
+</template>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#f1ece2"/>
+  <g transform="translate(100 100)">
+    <circle cx="-38" cy="0" r="7" fill="#141210"/>
+    <circle cx="38" cy="0" r="7" fill="#141210"/>
+    <path d="M -38 0 Q 0 -38 38 0" fill="none" stroke="#141210" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <text x="100" y="160" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-size="22" fill="#141210">Maxbridge</text>
+</svg>
+</template>
+
+<style>
+/* ─── Palantir-grade wordmark + mark ─── */
+.mb-mark {
+  width: 28px; height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.mb-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--ink);
+}
+.mb-wordmark .bar {
+  width: 1px; height: 14px;
+  background: var(--ink);
+  opacity: 0.35;
+}
+.mb-wordmark .sup {
+  font-size: 9.5px;
+  letter-spacing: 0.15em;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+/* ─── Hero signal panel (replaces terminal) ─── */
+.signal-panel {
+  background: var(--night);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+.signal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(241,236,226,0.55);
+}
+.signal-header .live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lime);
+}
+.signal-header .live::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: pulse 2s infinite;
+}
+.signal-body {
+  flex: 1;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  position: relative;
+}
+.signal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  color: rgba(241,236,226,0.55);
+  text-transform: uppercase;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(255,255,255,0.1);
+}
+.signal-row b {
+  color: var(--paper);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  font-weight: 400;
+}
+.signal-row.active b { color: var(--lime); }
+.signal-row .badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  padding: 3px 7px;
+  border: 1px solid rgba(241,236,226,0.3);
+  color: var(--paper);
+  font-style: normal;
+}
+.signal-row.active .badge { border-color: var(--lime); color: var(--lime); }
+.signal-foot {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(241,236,226,0.45);
+}
+.signal-foot .ok { color: var(--lime); }
+
+/* ─── CINEMATIC HOW IT WORKS SCENE ─── */
+.scene {
+  margin-top: 80px;
+  position: relative;
+  background: var(--night);
+  border: 1px solid var(--ink);
+  overflow: hidden;
+  min-height: 620px;
+}
+.scene-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(241,236,226,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(241,236,226,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+.scene-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(241,236,226,0.5);
+  z-index: 3;
+}
+.scene-header .phase-label { color: var(--lime); }
+.scene-header .ticker {
+  font-variant-numeric: tabular-nums;
+  color: rgba(241,236,226,0.35);
+}
+
+/* stage viewport */
+.scene-stage {
+  position: relative;
+  height: 620px;
+  width: 100%;
+}
+.scene-stage svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* phase readouts — big type bottom */
+.scene-readout {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 28px 32px 28px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(to top, rgba(14,12,10,0.95), rgba(14,12,10,0.7));
+  backdrop-filter: blur(8px);
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 32px;
+}
+.scene-readout .phase-title {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3.2vw, 44px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--paper);
+  font-weight: 400;
+  max-width: 560px;
+  text-wrap: balance;
+}
+.scene-readout .phase-title em { font-style: italic; color: var(--lime); }
+.scene-readout .phase-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(241,236,226,0.55);
+  text-align: right;
+  min-width: 140px;
+}
+.scene-readout .phase-meta b {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--lime);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  margin-top: 4px;
+}
+
+/* phase dots — right indicators */
+.scene-dots {
+  position: absolute;
+  right: 32px;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 3;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(241,236,226,0.4);
+}
+.scene-dots .dot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.4;
+  transition: opacity 400ms ease, color 400ms ease;
+}
+.scene-dots .dot-row.on { opacity: 1; color: var(--lime); }
+.scene-dots .d {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1px solid rgba(241,236,226,0.4);
+}
+.scene-dots .on .d { background: var(--lime); border-color: var(--lime); }
+
+/* Animation classes driven by body[data-phase] */
+.scn-app { transition: opacity 600ms ease, transform 600ms ease; }
+.scn-node { transition: all 500ms ease; }
+.scn-arc { transition: stroke-dashoffset 800ms ease, opacity 600ms ease; }
+.scn-bill { transition: opacity 500ms ease; }
+
+/* grid of tiny app icons on the left */
+.scene-stage .app-icon {
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+
+/* pulse beams */
+@keyframes beam-flow {
+  0% { stroke-dashoffset: 60; opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.5; }
+}
+
+/* MB hub rotation */
+@keyframes hub-rot { to { transform: rotate(360deg); } }
+/* particle pulses (replace old ones with tight line feed) */
+
+/* HOW IT WORKS — CINEMATIC (revert to dark hub+arcs version)
+   5 app cards L · hub center · subscription R · lime particles · 5 phase storyteller */
+
+/* HUD */
+60%, 100% { opacity: 0.3 } }
+
+/* Stage */
+/* App column */
+50% { transform: scale(1.35); opacity: 0.6 } }
+
+/* Hub */
+}
+100% { transform: scale(1.7); opacity: 0 } }
+
+/* Subscription card */
+/* Arcs svg overlay */
+/* Caption */
+/* Phase dots */
+@media (max-width: 960px) {
+  }
+
+/* credit strip (kept) */
+</style>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#f1ece2"/>
+    <g transform="translate(100 100)">
+      <circle r="54" fill="none" stroke="#050403" stroke-width="3"/>
+      <path d="M -34 0 Q 0 -40 34 0" fill="none" stroke="#d4ff3a" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="-34" cy="0" r="6" fill="#050403"/>
+      <circle cx="34"  cy="0" r="6" fill="#050403"/>
+      <text y="38" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="20" fill="#050403">Maxbridge</text>
+    </g>
+  </svg>
+</template>
+</head>
+<body data-phase="0">
+
+<!-- ═════════ NAV ═════════ -->
+<nav class="nav" aria-label="Primary">
+  <div class="wrap nav-inner">
+    <a href="#" class="mb-wordmark" aria-label="Maxbridge home">
+      <svg class="mb-mark" viewBox="0 0 28 16" fill="none" aria-hidden>
+        <circle cx="4" cy="8" r="3" fill="currentColor"/>
+        <circle cx="24" cy="8" r="3" fill="currentColor"/>
+        <path d="M 4 8 Q 14 -3 24 8" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span>Maxbridge</span>
+      <span class="bar"></span>
+      <span class="sup">by Marsirius AI Labs</span>
+      <img src="assets/mars-icon.png" alt="Marsirius AI Labs" style="height:38px;width:auto;display:inline-block;vertical-align:middle;margin-left:4px;" onerror="this.style.display='none'"/>
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#why">Why</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="#install" class="nav-cta">Get it <span class="arr">→</span></a>
+  </div>
+</nav>
+
+<!-- ═════════ HERO ═════════ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-eyebrow">For OpenClaw on macOS</div>
+
+    <h1 class="hero-h">
+      Use your <span class="italic">Claude Max</span><br>
+      in <span class="lime">OpenClaw.</span> Free.
+    </h1>
+
+    <div class="hero-grid">
+      <div>
+        <p class="hero-lede mt-[0px] mb-[0px] pt-[80px] pb-[80px] text-[42px]" style="font-size:42px;">
+          A <span class="hl">tiny local bridge</span> that pipes your Claude Max subscription into OpenClaw. Same machine. No API key. No extra bill. No catches.
+        </p>
+
+        <div class="hero-meta text-[18px]">
+          <div class="meta-item"><span>Price</span><b>Free...</b></div>
+          <div class="meta-item"><span>License</span><b>MIT open source</b></div>
+          <div class="meta-item"><span>Setup</span><b>90 seconds</b></div>
+        </div>
+      </div>
+
+      <!-- Signal panel replaces terminal -->
+      <div class="signal-panel" aria-hidden="true">
+        <div class="signal-header">
+          <span>Local runtime · 127.0.0.1:7423</span>
+          <span class="live">Online</span>
+        </div>
+        <div class="signal-body">
+          <div class="signal-row">
+            <span>Model</span>
+            <b>Claude Opus 4.7</b>
+          </div>
+          <div class="signal-row active">
+            <span>API key on wire</span>
+            <b>None</b>
+          </div>
+          <div class="signal-row active">
+            <span>Source</span>
+            <b>your Max plan</b>
+          </div>
+          <div class="signal-row">
+            <span>Extra charges</span>
+            <b>$0.00</b>
+          </div>
+          <div class="signal-row">
+            <span>Connected apps</span>
+            <b>OpenClaw</b>
+          </div>
+        </div>
+        <div class="signal-foot">
+          <span>oauth · keychain</span>
+          <span class="ok">✓ local only</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero CTAs -->
+    <div id="waitlist" class="waitlist-block">
+      <div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+          <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free</a>
+          <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
+        </div>
+        <p class="form-micro">100% free · MIT licensed · Built by one person team · Works in 90 seconds</p>
+        <p style="margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--ink-3);">
+          Or download directly from
+          <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline;text-underline-offset:2px;">GitHub Releases ↗</a>
+          — inspect the DMG, SHA256, script, everything.
+        </p>
+        <div class="form-success" role="status" aria-live="polite">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+            <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M5.5 9 L8 11.5 L12.5 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>You're in. Check your inbox for the install file.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═════════ HOW IT WORKS — CINEMATIC SCENE ═════════ -->
+<section class="how how-cine" id="how" data-phase="0" aria-label="How Maxbridge works">
+  <div class="how-head">
+    <div class="sec-eyebrow">How it works</div>
+    <h2 class="sec-h">Your apps talk to <em>Maxbridge.</em> Maxbridge talks to <em>your Claude Max.</em></h2>
+    <p class="sec-sub">Your apps talk to Maxbridge. Maxbridge talks to your Claude Max.</p>
+  </div>
+
+  <div class="cine-panel">
+    <div class="cine-hud">
+      <div class="hud-left"><span class="hud-dot"></span><span id="hudPhase">PHASE 01 · SEND</span></div>
+      <div class="hud-right"><span>LOCAL RUNTIME · 127.0.0.1</span></div>
+    </div>
+
+    <div class="cine-stage">
+      <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="cine-col left">
+        <div class="cine-app"><span class="ca-dot"></span><span class="ca-name">OpenClaw</span><span class="ca-sub">flagship</span></div>
+      </div>
+
+      <div class="cine-hub">
+        <div class="hub-ring-outer"></div>
+        <div class="hub-ring"></div>
+        <div class="hub-ring-mid"></div>
+        <div class="hub-core">
+          <svg class="hub-glyph" viewBox="0 0 28 16" fill="none" aria-hidden="true">
+            <circle cx="4" cy="8" r="3" fill="currentColor"/>
+            <circle cx="24" cy="8" r="3" fill="currentColor"/>
+            <path d="M 4 8 Q 14 -3 24 8" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="hub-label">MAXBRIDGE</div>
+        </div>
+        <div class="hub-pulse"></div>
+        <div class="hub-pulse p2"></div>
+        <div class="hub-pulse p3"></div>
+      </div>
+
+      <div class="cine-col right">
+        <div class="cine-plan">
+          <div class="plan-label">YOUR CLAUDE MAX</div>
+          <div class="plan-name">Claude Opus 4.7</div>
+          <div class="plan-meta"><span>$200 / mo</span><span class="plan-dot"></span><span>already paid</span></div>
+          <div class="plan-bill">Extra charges · <b id="cineBill">$0.00</b></div>
+        </div>
+      </div>
+
+      <svg class="cine-arcs" viewBox="0 0 1000 560" preserveAspectRatio="none">
+        <g stroke="rgba(212,255,58,0.16)" stroke-width="1" fill="none">
+          <path d="M 120 80  Q 340 260, 500 280"/>
+          <path d="M 120 180 Q 340 260, 500 280"/>
+          <path d="M 120 280 L 500 280"/>
+          <path d="M 120 380 Q 340 280, 500 280"/>
+          <path d="M 120 480 Q 340 340, 500 280"/>
+        </g>
+        <path id="hubPlanPath" d="M 500 280 Q 720 200, 880 280" stroke="rgba(212,255,58,0.22)" stroke-width="1" fill="none"/>
+        <path d="M 500 280 Q 720 200, 880 280" class="arc-flow" stroke="rgba(212,255,58,0.6)" stroke-width="1.2" fill="none"/>
+        <path d="M 120 80  Q 340 260, 500 280" class="arc-flow" stroke="rgba(212,255,58,0.38)" stroke-width="1" fill="none"/>
+        <path d="M 120 180 Q 340 260, 500 280" class="arc-flow" stroke="rgba(212,255,58,0.38)" stroke-width="1" fill="none" style="animation-delay:-0.35s"/>
+        <path d="M 120 280 L 500 280" class="arc-flow" stroke="rgba(212,255,58,0.38)" stroke-width="1" fill="none" style="animation-delay:-0.7s"/>
+        <path d="M 120 380 Q 340 280, 500 280" class="arc-flow" stroke="rgba(212,255,58,0.38)" stroke-width="1" fill="none" style="animation-delay:-1.05s"/>
+        <path d="M 120 480 Q 340 340, 500 280" class="arc-flow" stroke="rgba(212,255,58,0.38)" stroke-width="1" fill="none" style="animation-delay:-1.4s"/>
+        <g class="cine-orbs">
+          <circle class="orb" r="5" fill="#d4ff3a"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#hubPlanPath"/></animateMotion></circle>
+          <circle class="orb" r="4" fill="#d4ff3a" opacity="0.8"><animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite"><mpath href="#hubPlanPath"/></animateMotion></circle>
+          <circle class="orb" r="4" fill="#ffffff" opacity="0.9"><animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1"><mpath href="#hubPlanPath"/></animateMotion></circle>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cine-caption">
+      <div class="cap-num" id="capNum">01</div>
+      <div>
+        <h3 class="cap-head" id="capHead">OpenClaw sends your prompt</h3>
+        <p class="cap-body" id="capBody"></p>
+      </div>
+    </div>
+
+    <div class="cine-dots" role="tablist">
+      <button class="pd on" data-p="0"><span>01</span><b>Send</b><i class="pd-bar"></i></button>
+      <button class="pd"    data-p="1"><span>02</span><b>Receive</b></button>
+      <button class="pd"    data-p="2"><span>03</span><b>Route</b></button>
+      <button class="pd"    data-p="3"><span>04</span><b>Respond</b></button>
+      <button class="pd"    data-p="4"><span>05</span><b>No charges</b></button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═════════ WHY IT EXISTS ═════════ -->
+<section class="trust" id="why">
+  <div class="wrap" style="display:flex;align-items:center;gap:48px;">
+    <div style="flex:1;min-width:0;">
+      <div class="sec-eyebrow reveal">Why it exists</div>
+      <h2 class="sec-h reveal">Built by someone who <em>had the same problem.</em></h2>
+      <div class="pillars reveal delay-1" style="display:block;max-width:720px;">
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          After Anthropic blocked Claude subscriptions from third-party tools, OpenClaw power users went from $200/mo Max plans to $5,000/mo API bills overnight.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          I was one of them. So I built Maxbridge.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;margin-bottom:20px;">
+          It's free, open source, and runs entirely on your Mac. No API key. No extra bill. No legal gray area — uses Anthropic's own Claude CLI, which Anthropic re-allowed in April 2026.
+        </p>
+        <p class="pillar-body" style="font-size:17px;line-height:1.7;">
+          Built in my spare time. Released as a gift to the OpenClaw community. No paid tier. Ever.
+        </p>
+        <p class="pillar-body" style="font-size:15px;margin-top:28px;color:var(--ink-3);display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>—</span>
+          <a href="https://marsirius.ai/#team" target="_blank" rel="noopener" style="position:relative;display:inline-block;color:var(--ink);text-decoration:none;font-weight:500;padding-bottom:6px;">
+            Mustafa Bulutoglulari
+            <svg aria-hidden="true" viewBox="0 0 240 14" preserveAspectRatio="none" style="position:absolute;left:-4px;right:-4px;bottom:-2px;width:calc(100% + 8px);height:10px;overflow:visible;">
+              <path d="M2 8 C 30 3, 60 11, 95 6 S 165 10, 200 5 S 232 9, 238 7" stroke="#c9f64e" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 11 C 40 8, 80 12, 120 9 S 190 11, 234 10" stroke="#c9f64e" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+            </svg>
+          </a>
+          <a href="https://x.com/ENL_Global" target="_blank" rel="noopener" aria-label="Mustafa on X / Twitter" style="display:inline-flex;align-items:center;color:var(--ink);text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <span>·</span>
+          <a href="https://www.marsirius.ai" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:var(--ink-3);text-decoration:none;">
+            <img src="assets/mars-icon.png" alt="" aria-hidden="true" style="height:16px;width:auto;display:inline-block;vertical-align:middle;"/>
+            Marsirius AI Labs
+          </a>
+        </p>
+      </div>
+    </div>
+    <div class="text-[130px] text-left pl-[0px] ml-[0px] pr-[200px]" style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;">
+      <img src="assets/mbimage.png" alt="Mustafa, Marsirius AI Labs" class="text-[130px] ml-[0px] mr-[180px]" style="height:630px;width:auto;object-fit:cover;border-radius:4px;"/>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ TRUST PILLARS ═════════ -->
+<section class="trust" id="trust">
+  <div class="wrap">
+    <div class="sec-eyebrow reveal">Principles</div>
+    <h2 class="sec-h reveal">Quiet by <em>default.</em></h2>
+    <p class="sec-sub reveal delay-1">Three rules, baked into the architecture.</p>
+
+    <div class="pillars reveal delay-2">
+      <div class="pillar">
+        <div class="pillar-num">01<sup>↗</sup></div>
+        <h3 class="pillar-title">LOCAL RUNTIME<br><em>Loopback only.</em></h3>
+        <p class="pillar-body">
+          Maxbridge binds 127.0.0.1. No inbound from the internet. No telemetry. Your prompts go from your Mac directly to Claude — not through our servers.
+        </p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">02<sup>⌘</sup></div>
+        <h3 class="pillar-title">ONE MACHINE<br><em>Per-Mac install.</em></h3>
+        <p class="pillar-body">
+          <code>claude setup-token</code> runs once per install. No cross-machine session sharing.
+        </p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-num">03<sup>×</sup></div>
+        <h3 class="pillar-title">YOUR SESSION<br><em>Stays in your keychain.</em></h3>
+        <p class="pillar-body">
+          The OAuth session lives in macOS Keychain, same as Claude CLI. Maxbridge never reads, transmits, or caches it.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═════════ INSTALL ═════════ -->
+<section class="big-cta" id="install">
+  <div class="wrap">
+    <h2 class="cta-h">
+      Three steps. <em>Free...</em>
+    </h2>
+    <ol class="install-steps" style="list-style:none;padding:0;margin:32px 0 40px;display:grid;gap:14px;max-width:780px;margin-left:auto;margin-right:auto;text-align:left;font-family:var(--sans);">
+      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">01 · Download</span>
+        <span>Grab the installer. No card, no email required. Just download.</span>
+      </li>
+      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">02 · Drop</span>
+        <span>Drag the installer into your OpenClaw bot chat — any channel (Telegram, WhatsApp, Discord, iMessage).</span>
+      </li>
+      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">03 · Done</span>
+        <span>Your OpenClaw agent installs Maxbridge itself, runs <code>claude setup-token</code> in the browser (the only manual step, ~45s), then greets you. You're on your Max plan.</span>
+      </li>
+    </ol>
+
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;">
+      <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free <span class="arr">→</span></a>
+      <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
+    </div>
+    <p class="form-micro" style="text-align:center;margin-top:16px;">100% free · MIT licensed · No card · No email</p>
+    <p style="text-align:center;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--ink-3);">
+      Prefer to inspect first? Download each asset (install.md, install.sh, DMG + SHA256) from
+      <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--paper);text-decoration:underline;text-underline-offset:2px;">GitHub Releases ↗</a>.
+    </p>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section class="faq" id="faq">
+  <div class="wrap-narrow">
+    <div class="sec-eyebrow reveal">Questions</div>
+    <h2 class="sec-h reveal">Answered <em>plainly.</em></h2>
+
+    <div class="faq-list reveal delay-1">
+      <details class="faq-item">
+        <summary>Why free?</summary>
+        <div class="answer">I built this for myself, then realized every OpenClaw + Claude Max user has the same problem. Charging $5/mo wouldn't change my life. Helping the OpenClaw community might. So it's free.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Is it allowed?</summary>
+        <div class="answer">Yes. Maxbridge uses only your locally-installed Claude CLI, the same way typing <code>claude</code> in Terminal does. Anthropic re-allowed CLI usage for third-party orchestration in April 2026. Same user, same Mac, same keychain.</div>
+      </details>
+      <details class="faq-item">
+        <summary>What do I need?</summary>
+        <div class="answer">Apple Silicon Mac, macOS 13+, your own Claude Max or Pro subscription, and OpenClaw installed.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Will it always be free?</summary>
+        <div class="answer">Yes. MIT license, open source, no paid tier planned. If you want to support the work, star the repo or sponsor on GitHub.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Will it work without OpenClaw?</summary>
+        <div class="answer">The proxy is a generic local Anthropic endpoint on 127.0.0.1:7423 — any app that speaks the Anthropic API can use it. But the install flow is built for OpenClaw users.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Who built this?</summary>
+        <div class="answer"><a href="https://marsirius.ai/#team" target="_blank" rel="noopener">Mustafa Bulutoglulari</a> <a href="https://x.com/ENL_Global" target="_blank" rel="noopener" aria-label="X / Twitter" style="display:inline-flex;align-items:center;gap:4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>. Powered by Marsirius AI Labs.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ FOOTER ═════════ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-top" style="border-bottom:none;">
+      <div>
+        <a href="#" class="mb-wordmark" style="margin-bottom:16px;">
+          <svg class="mb-mark" viewBox="0 0 28 16" fill="none" aria-hidden>
+            <circle cx="4" cy="8" r="3" fill="currentColor"/>
+            <circle cx="24" cy="8" r="3" fill="currentColor"/>
+            <path d="M 4 8 Q 14 -3 24 8" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+          <span>Maxbridge</span>
+        </a>
+        <p class="foot-tag" style="margin-top:12px;"><em>Claude Max, in OpenClaw.</em> Local. Private. Yours. Free.</p>
+        <p style="margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">Marsirius AI Labs</p>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#why">Why</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener">Source (GitHub)</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="mailto:maxbridge@marsirius.ai?subject=Privacy%20policy%20request">Privacy</a></li>
+          <li><a href="mailto:maxbridge@marsirius.ai?subject=Terms%20request">Terms</a></li>
+          <li><p>Maxbridge is an independent project by Marsirius Artificial Intelligence Consultants LLC. Not affiliated with Anthropic, OpenClaw, OpenAI, or Apple.</p></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:maxbridge@marsirius.ai">maxbridge@marsirius.ai</a></li>
+          <li><p>One-person team · Cyprus / Dubai</p></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--ink);"></div>
+  <div class="wrap">
+    <div class="foot-bot" style="flex-wrap:nowrap;align-items:center;">
+      <div class="big-word" style="border-top:none;padding-top:0;margin-top:0;width:auto;flex:1;display:flex;align-items:center;">
+        <img src="assets/maxbridge-lockup-lime.png" alt="Maxbridge by Marsirius AI Labs" style="height:144px;width:auto;display:block;"/>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
+        <a href="https://www.marsirius.ai" target="_blank" rel="noopener"><img src="assets/mars-full-dark.png" alt="Marsirius AI Labs" style="width:auto;height:144px;object-fit:contain;display:block;"/></a>
+        <span class="year">© 2026</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Checkout forms — POST to Cloudflare Worker, redirect to Stripe Checkout URL on success
+  document.querySelectorAll('.form-inline').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = new FormData(form).get('email');
+      const ref = form.dataset.ref || 'hero';
+      const btn = form.querySelector('button[type="submit"]');
+      const origLabel = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Loading…'; }
+      try {
+        const r = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, ref })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d && d.url) {
+          window.location.href = d.url;
+          return;
+        }
+        alert('Checkout failed: ' + ((d && d.error) || 'please try again') + '. Retry?');
+      } catch (err) {
+        alert('Checkout failed: network error. Please try again.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origLabel; }
+      }
+    });
+  });
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ══════════════════════════════════════════════════════════
+  // Cinematic how-it-works controller
+  const cine = document.querySelector('.how-cine');
+  if (cine) {
+    const phases = [
+      { num:'01', head:'OpenClaw sends your prompt',        body:"", hud:'PHASE 01 · SEND',       dur:3800 },
+      { num:'02', head:'Maxbridge gets it on 127.0.0.1',    body:"", hud:'PHASE 02 · RECEIVE',    dur:4200 },
+      { num:'03', head:'Forwarded through your Claude CLI', body:"", hud:'PHASE 03 · ROUTE',      dur:4800 },
+      { num:'04', head:'Your Max plan answers',             body:"", hud:'PHASE 04 · RESPOND',    dur:4600 },
+      { num:'05', head:'Nothing else billed. Ever.',        body:"", hud:'PHASE 05 · NO CHARGES', dur:5000 },
+    ];
+    const dots = cine.querySelectorAll('.pd');
+    const capNum  = document.getElementById('capNum');
+    const capHead = document.getElementById('capHead');
+    const capBody = document.getElementById('capBody');
+    const hudPhase = document.getElementById('hudPhase');
+    let i = 0, timer = null, barTimer = null;
+    function render() {
+      cine.setAttribute('data-phase', String(i));
+      dots.forEach((d, idx) => {
+        d.classList.toggle('on', idx === i);
+        const bar = d.querySelector('.pd-bar');
+        if (bar) bar.style.width = idx < i ? '100%' : '0%';
+      });
+      const p = phases[i];
+      capNum.textContent = p.num;
+      capHead.textContent = p.head;
+      capBody.textContent = p.body;
+      hudPhase.textContent = p.hud;
+    }
+    function advance() { i = (i + 1) % phases.length; render(); schedule(); }
+    function schedule() {
+      clearTimeout(timer);
+      clearInterval(barTimer);
+      const dur = phases[i].dur;
+      const start = performance.now();
+      const bar = dots[i].querySelector('.pd-bar');
+      if (bar) bar.style.width = '0%';
+      barTimer = setInterval(() => {
+        const pct = Math.min(100, ((performance.now() - start) / dur) * 100);
+        if (bar) bar.style.width = pct + '%';
+        if (pct >= 100) clearInterval(barTimer);
+      }, 50);
+      timer = setTimeout(advance, dur);
+    }
+    dots.forEach(d => d.addEventListener('click', () => { i = parseInt(d.dataset.p, 10); render(); schedule(); }));
+    render();
+    schedule();
+  }
+</script>
+</body>
+</html>

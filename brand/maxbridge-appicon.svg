@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-label="Maxbridge app icon">
+  <rect width="512" height="512" rx="96" fill="#1a1612"></rect>
+  <g transform="translate(86 200)">
+    <circle cx="50" cy="56" r="36" fill="#d4ff3a"></circle>
+    <circle cx="290" cy="56" r="36" fill="#d4ff3a"></circle>
+    <path d="M 50 56 Q 170 -60 290 56" stroke="#d4ff3a" stroke-width="19" fill="none" stroke-linecap="round"></path>
+  </g>
+</svg>

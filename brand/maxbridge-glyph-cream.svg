@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160" aria-label="Maxbridge glyph">
+  <circle cx="40" cy="80" r="30" fill="#f4efe5"></circle>
+  <circle cx="240" cy="80" r="30" fill="#f4efe5"></circle>
+  <path d="M 40 80 Q 140 -30 240 80" stroke="#f4efe5" stroke-width="16" fill="none" stroke-linecap="round"></path>
+</svg>

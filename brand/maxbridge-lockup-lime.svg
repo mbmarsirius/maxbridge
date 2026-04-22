@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" font-family="&#39;JetBrains Mono&#39;, ui-monospace, monospace" aria-label="Maxbridge lockup lime-on-ink">
+  <rect width="1200" height="320" fill="#1a1612"></rect>
+  <g transform="translate(80 95)">
+    <circle cx="28" cy="56" r="21" fill="#d4ff3a"></circle>
+    <circle cx="168" cy="56" r="21" fill="#d4ff3a"></circle>
+    <path d="M 28 56 Q 98 -22 168 56" stroke="#d4ff3a" stroke-width="11.2" fill="none" stroke-linecap="round"></path>
+  </g>
+  <text x="320" y="180" fill="#f4efe5" font-size="92" font-weight="600" letter-spacing="-2">Maxbridge</text>
+  <line x1="320" y1="210" x2="450" y2="210" stroke="#d4ff3a" stroke-width="1.2" opacity="0.55"></line>
+  <text x="320" y="242" fill="#d4ff3a" opacity="0.75" font-size="20" letter-spacing="3">BY MARSIRIUS AI LABS</text>
+</svg>
