@@ -693,14 +693,29 @@ export async function runLocalOauthMessages(
   const enableBypass = (env.MAXBRIDGE_BYPASS_PERMISSIONS ?? '0') === '1';
   const enableSystemPrompt = (env.MAXBRIDGE_APPEND_SYSTEM_PROMPT ?? '0') === '1';
   const enableWorkdir = (env.MAXBRIDGE_ADD_DIR ?? '0') === '1';
-  const enableVerbose = (env.MAXBRIDGE_CLI_VERBOSE ?? '0') === '1';
 
+  // Minimum-viable arg set that works across claude CLI 2.1.19 → 2.1.90+:
+  //   -p                      : print mode (required for non-interactive)
+  //   --model <id>            : model selection
+  //   --output-format stream-json : structured events for tool/result capture
+  //   --verbose               : REQUIRED by claude 2.1.90 when --print is
+  //                             combined with --output-format=stream-json.
+  //                             Older 2.1.19 accepts it silently; without it,
+  //                             2.1.90 exits 1 with:
+  //                               "Error: When using --print,
+  //                                --output-format=stream-json requires --verbose"
+  //                             Observed in cold-install test on 2026-04-22.
+  //
+  // The other advanced flags (--permission-mode, --tools, --add-dir,
+  // --append-system-prompt) remain opt-in via env var because they've been
+  // renamed/reshaped across CLI versions and are not required for a clean
+  // single-turn /v1/messages response.
   const cliArgs = [
     '-p',
     '--model', requestedModel,
     '--output-format', 'stream-json',
+    '--verbose',
   ];
-  if (enableVerbose) cliArgs.push('--verbose');
   if (enableBypass) cliArgs.push('--permission-mode', 'bypassPermissions');
   if (enableTools) cliArgs.push('--tools', allowedTools);
   if (enableWorkdir) cliArgs.push('--add-dir', workspaceDir);
