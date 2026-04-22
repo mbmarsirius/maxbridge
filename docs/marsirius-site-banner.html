@@ -1,0 +1,57 @@
+<!--
+  MARSIRIUS.AI TOP BANNER — paste at the very top of <body>
+
+  What it does:
+    - Ink-on-cream strip at the very top of marsirius.ai
+    - Shows the Maxbridge lime glyph + one-line pitch
+    - Links to https://maxbridge.marsirius.ai
+    - Responsive; collapses gracefully on mobile
+
+  Brand tokens match Maxbridge exactly:
+    --ink:   #1a1612
+    --cream: #f4efe5
+    --lime:  #d4ff3a
+
+  Safe to paste into any static site (HTML, Next.js layout, Replit static
+  template). No external dependencies, no JS required.
+-->
+<a
+  href="https://maxbridge.marsirius.ai"
+  target="_blank"
+  rel="noopener"
+  style="
+    display: block;
+    width: 100%;
+    background: #1a1612;
+    color: #f4efe5;
+    padding: 12px 20px;
+    font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    text-align: center;
+    border-bottom: 1px solid rgba(212,255,58,0.15);
+    transition: background 180ms ease;
+  "
+  onmouseover="this.style.background='#0d0a07'"
+  onmouseout="this.style.background='#1a1612'"
+>
+  <span style="display: inline-flex; align-items: center; gap: 14px; max-width: 900px; flex-wrap: wrap; justify-content: center;">
+    <svg width="28" height="16" viewBox="0 0 28 16" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+      <circle cx="4" cy="8" r="3" fill="#d4ff3a"/>
+      <circle cx="24" cy="8" r="3" fill="#d4ff3a"/>
+      <path d="M 4 8 Q 14 -3 24 8" stroke="#d4ff3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    </svg>
+
+    <span style="font-weight: 500; color: #f4efe5;">
+      <strong style="color: #d4ff3a; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;">NEW</strong>
+      &nbsp;·&nbsp;
+      <strong style="color: #f4efe5; letter-spacing: 0.04em;">Maxbridge</strong>
+      <span style="color: rgba(241,236,226,0.65);">— use your Claude Max in OpenClaw. Free.</span>
+    </span>
+
+    <span style="color: #d4ff3a; border-bottom: 1px dotted #d4ff3a; padding-bottom: 1px;">
+      Install &rarr;
+    </span>
+  </span>
+</a>

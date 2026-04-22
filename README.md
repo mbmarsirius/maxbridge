@@ -199,7 +199,12 @@ If you think you found a vulnerability, email `maxbridge@marsirius.ai` — do no
 
 ## Credits
 
-Built by [Mustafa Bulutoglulari](https://github.com/mbmarsirius). Powered by [Marsirius AI Labs](https://marsirius.ai). Independent project — not affiliated with Anthropic, OpenClaw, OpenAI, or Apple.
+Built by [Mustafa Bulutoglulari](https://github.com/mbmarsirius). Powered by [Marsirius AI Labs](https://www.marsirius.ai). Independent project — not affiliated with Anthropic, OpenClaw, OpenAI, or Apple.
+
+## With thanks
+
+- [@alexfinnX](https://x.com/alexfinnX) — for the *"figure it out"* mantra that every good Claw session leans on. Stuck? Ask your Claw. It'll figure it out.
+- [@steipete](https://x.com/steipete) — sweet revenge 😉
 
 ---
 
