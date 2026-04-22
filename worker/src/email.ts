@@ -83,7 +83,8 @@ export function renderWelcomeEmail(opts: {
       <p style="margin:24px 0">
         <a href="${opts.downloadUrl}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Download activation file</a>
       </p>
-      <p><strong>To install:</strong> open the file on the Mac where you run OpenClaw, then drag-drop it into your OpenClaw bot chat (Telegram, WhatsApp, etc). Your bot will run the install autonomously. Takes about 2 minutes and one <code>claude setup-token</code> browser login.</p>
+      <p><strong>To install:</strong> open Terminal on the Mac where you run OpenClaw and paste <code>curl -fsSL https://install.marsirius.ai | bash</code>. The script installs everything (Homebrew, Claude CLI, Maxbridge daemon, OpenClaw wire-up) and pauses once for you to sign into Claude in the browser. ~90 seconds end-to-end.</p>
+      <p style="color:#666;font-size:13px">Prefer drag-drop? Your download above carries the same command — drop it into your OpenClaw bot chat and the bot will run it for you.</p>
       <p style="color:#666;font-size:13px;margin-top:32px">License reference: <code>${escapeHtml(opts.licenseSlug)}</code></p>
       <p style="color:#666;font-size:13px">If the link expires or you need help, reply to this email.</p>
       <p style="margin-top:32px">— <a href="${opts.landingUrl}">Maxbridge</a></p>

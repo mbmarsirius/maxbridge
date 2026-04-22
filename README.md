@@ -118,9 +118,9 @@ maxbridge/
 │                         install.marsirius.ai
 │
 ├── tests/            74 client tests (vitest, NODE_ENV=test required)
-├── scripts/          build-bundle.sh, sign-setup.sh, sign-and-notarize.sh
-└── docs/             specs: license gate, stripe checkout, tauri bundle,
-                      design briefs for the landing + onboarding wizard
+└── scripts/          build-bundle.sh (daemon bundle), preflight.sh,
+                      legacy DMG tooling (sign-and-notarize.sh,
+                      publish-release.sh) retained for reference
 ```
 
 **The install chain (pure CLI, no GUI):**
