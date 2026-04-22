@@ -1089,3 +1089,95 @@ body::before {
 .reveal.delay-1 { transition-delay: 100ms; }
 .reveal.delay-2 { transition-delay: 200ms; }
 .reveal.delay-3 { transition-delay: 300ms; }
+
+/* ──────────────────────────────────────────────────────────────
+   MOBILE OVERRIDES — added 2026-04-22
+   Responsive rescue: the inline-styled sections (Why / Hero /
+   cinematic scene / footer) stack vertically on narrow viewports
+   and the 630px portrait scales down to fit phone screens.
+   ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 820px) {
+  /* ── Hero ── */
+  .hero-h { font-size: clamp(32px, 9vw, 56px) !important; line-height: 1.05 !important; }
+  .hero-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .hero-meta { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .signal-panel { min-height: auto !important; }
+  .signal-body { padding: 20px 18px !important; gap: 16px !important; }
+  .signal-row { font-size: 10.5px !important; padding-bottom: 10px !important; }
+  .signal-row b { font-size: 18px !important; }
+  .signal-header, .signal-foot { padding: 12px 16px !important; font-size: 9.5px !important; }
+  #waitlist .nav-cta { width: 100% !important; justify-content: center !important; text-align: center !important; font-size: 13px !important; padding: 14px 18px !important; }
+  #waitlist > div > div { flex-direction: column !important; align-items: stretch !important; }
+
+  /* ── Why section (#why) ── */
+  #why .wrap { flex-direction: column !important; gap: 32px !important; align-items: stretch !important; }
+  #why .pillars { max-width: 100% !important; }
+  #why .pillar-body { font-size: 15px !important; line-height: 1.6 !important; }
+  #why .sec-h { font-size: clamp(28px, 7vw, 44px) !important; line-height: 1.1 !important; }
+  #why [style*="flex-shrink"] { padding-right: 0 !important; justify-content: center !important; width: 100% !important; }
+  #why img[src*="mbimage"] {
+    height: auto !important;
+    max-height: 360px !important;
+    max-width: 80% !important;
+    width: auto !important;
+    margin: 0 auto !important;
+  }
+
+  /* ── Cinematic how-it-works scene ── */
+  .how-cine .cine-panel { min-height: auto !important; }
+  .cine-stage { height: 380px !important; min-height: 380px !important; }
+  .cine-hud { padding: 10px 14px !important; font-size: 9px !important; }
+  .cine-col.left, .cine-col.right { transform: scale(0.72) !important; }
+  .cine-caption { padding: 18px !important; }
+  .cap-head { font-size: 20px !important; }
+  .cap-body { font-size: 13px !important; }
+  .cap-num { font-size: 36px !important; }
+  .cine-dots { flex-wrap: wrap !important; gap: 6px !important; padding: 10px !important; }
+  .pd { font-size: 10px !important; padding: 6px 10px !important; }
+  .scene { min-height: 480px !important; }
+
+  /* ── Install steps ── */
+  .install-steps li { grid-template-columns: 1fr !important; gap: 8px !important; padding: 14px 16px !important; }
+  .install-steps li span:first-child { font-size: 10px !important; }
+  .cta-h { font-size: clamp(28px, 7vw, 44px) !important; line-height: 1.1 !important; }
+  .big-cta .form-inline, .big-cta [style*="display:flex"] { flex-direction: column !important; align-items: stretch !important; }
+  .big-cta .nav-cta { width: 100% !important; justify-content: center !important; text-align: center !important; }
+
+  /* ── Trust pillars ── */
+  .trust .pillars { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .pillar { padding: 20px !important; }
+  .pillar-title { font-size: 13px !important; }
+
+  /* ── FAQ ── */
+  .faq-item summary { font-size: 16px !important; padding: 16px 14px !important; }
+  .answer { font-size: 14px !important; line-height: 1.6 !important; }
+
+  /* ── Nav ── */
+  .nav-inner { flex-wrap: wrap !important; gap: 10px !important; }
+  .nav-links { gap: 14px !important; font-size: 12px !important; }
+  .nav-cta { font-size: 11px !important; padding: 8px 14px !important; }
+
+  /* ── Footer ── */
+  .foot-top { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .big-word span:first-child { font-size: clamp(48px, 16vw, 96px) !important; }
+  .big-word { flex-direction: column !important; gap: 12px !important; }
+  .foot-col h4 { font-size: 11px !important; }
+
+  /* ── Generic width overrides for inline style="width:720px/780px" ── */
+  [style*="max-width:780px"], [style*="max-width:720px"] { max-width: 100% !important; }
+  [style*="width:780px"], [style*="width:720px"] { width: 100% !important; max-width: 100% !important; }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 14px; }
+  .hero-h { font-size: 30px !important; }
+  .sec-h { font-size: 26px !important; }
+  .cta-h { font-size: 26px !important; }
+  #why img[src*="mbimage"] { max-height: 260px !important; max-width: 85% !important; }
+  .wrap, .wrap-narrow { padding: 0 16px !important; }
+  .signal-row b { font-size: 16px !important; }
+  .cine-stage { height: 340px !important; min-height: 340px !important; }
+  .cine-col.left, .cine-col.right { transform: scale(0.58) !important; }
+  .pd b { display: none; }  /* keep only numbers on tiny screens */
+}
