@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Allow the embedded Node runtime to JIT-compile JavaScript. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+
+  <!-- Allow V8's mmap of unsigned executable pages (required for JIT). -->
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- The bundled Node runtime and its dylibs are not Apple-signed; allow
+       the app bundle to load them without triggering Library Validation. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- Outbound HTTP to the local Claude CLI (stdio pipe) and to
+       api.anthropic.com / install.maxbridge.ai for online license poll. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- The proxy server binds on 127.0.0.1:7423; this is required even though
+       the port is loopback-only (macOS still considers it "server" traffic). -->
+  <key>com.apple.security.network.server</key>
+  <true/>
+</dict>
+</plist>

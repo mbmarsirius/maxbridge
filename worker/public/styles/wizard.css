@@ -1,0 +1,369 @@
+/* MaxBridge onboarding — design tokens + base styles
+   Light mode only. Calm infra voice. No mock data. */
+
+:root {
+  /* Accent — single restrained indigo. Used sparingly. */
+  --accent: #5e5ce6;
+  --accent-ink: #3634a3;
+  --accent-soft: #ececfb;
+  --accent-softer: #f6f6fd;
+
+  /* Neutrals — pure, cool, Apple-style */
+  --bg: #fbfbfd;
+  --bg-sunk: #f5f5f7;
+  --surface: #ffffff;
+  --ink: #1d1d1f;
+  --ink-2: #424245;
+  --ink-3: #6e6e73;
+  --ink-4: #a1a1a6;
+  --hairline: #e8e8ed;
+  --hairline-2: #d2d2d7;
+
+  /* Status — muted, never shouty */
+  --ok: #30a46c;
+  --ok-soft: #e8f5ee;
+  --warn: #bf7d0a;
+  --warn-soft: #fcf4e4;
+  --err: #c0392b;
+  --err-soft: #fbeeec;
+
+  /* Type — SF Pro only. No display serif. Minimal. */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Menlo", monospace;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur: 200ms;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: #e8e8ed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+
+button { font-family: inherit; }
+code, pre, .mono { font-family: var(--font-mono); }
+
+/* ─────── Buttons ─────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border: none;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+  white-space: nowrap;
+  min-height: 40px;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-primary:hover { background: #000; }
+.btn-primary:active { transform: translateY(0.5px); }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hairline-2);
+}
+.btn-secondary:hover { background: var(--bg-sunk); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+}
+.btn-ghost:hover { background: var(--bg-sunk); color: var(--ink); }
+
+.btn-accent {
+  background: var(--accent);
+  color: white;
+}
+.btn-accent:hover { background: var(--accent-ink); }
+
+.btn-wide { width: 100%; }
+.btn-sm { padding: 7px 12px; font-size: 13px; min-height: 30px; }
+
+/* ─────── Pills ─────── */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-family: var(--font-ui);
+}
+.pill-neutral { background: var(--bg-sunk); color: var(--ink-3); }
+.pill-ok { background: var(--bg-sunk); color: var(--ok); }
+.pill-ok .pill-dot { background: var(--ok); }
+.pill-accent { background: var(--bg-sunk); color: var(--ink-2); }
+.pill-warn { background: var(--warn-soft); color: var(--warn); }
+.pill-err { background: var(--err-soft); color: var(--err); }
+
+.pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+
+/* ─────── Card ─────── */
+
+.card-surface {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+/* ─────── Screen layout ─────── */
+
+.screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 56px 28px;
+  position: relative;
+  background: var(--bg);
+}
+.screen-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.screen-footer {
+  padding-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.eyebrow::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 1px;
+  background: var(--hairline-2);
+}
+
+h1.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+h1.display em {
+  font-style: normal;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--ink) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+h2.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.subhead {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-3);
+  margin: 0;
+  max-width: 560px;
+  text-wrap: pretty;
+  letter-spacing: -0.005em;
+}
+
+.micro {
+  font-size: 12px;
+  color: var(--ink-4);
+  line-height: 1.5;
+}
+.micro.mono { font-size: 11px; }
+
+/* ─────── Conduit line (signature motif) ─────── */
+
+.conduit {
+  position: relative;
+  height: 1px;
+  background: var(--hairline-2);
+  overflow: hidden;
+}
+.conduit::after {
+  content: "";
+  position: absolute;
+  top: -1.5px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: conduit-flow 3.2s linear infinite;
+  border-radius: 2px;
+}
+@keyframes conduit-flow {
+  0% { left: -40px; }
+  100% { left: 100%; }
+}
+
+/* ─────── Keyboard focus ring on cards ─────── */
+[tabindex]:focus-visible,
+.focusable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─────── Utility ─────── */
+.stack-xs > * + * { margin-top: 4px; }
+.stack-sm > * + * { margin-top: 8px; }
+.stack-md > * + * { margin-top: 16px; }
+.stack-lg > * + * { margin-top: 24px; }
+.stack-xl > * + * { margin-top: 32px; }
+
+.row { display: flex; align-items: center; gap: 10px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+.grow { flex: 1; }
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--bg-sunk);
+  box-shadow: inset 0 0 0 1px var(--hairline-2), 0 1px 0 var(--hairline-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* ─────── Tweaks panel ─────── */
+.tweaks {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 260px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18), inset 0 0 0 1px var(--hairline);
+  padding: 14px;
+  font-family: var(--font-ui);
+  z-index: 1000;
+  display: none;
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+.tweaks.open { display: block; }
+.tweaks h4 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.tweaks-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.tweaks-item {
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.tweaks-item:hover { background: var(--bg-sunk); color: var(--ink); }
+.tweaks-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.tweaks-sep {
+  grid-column: span 2;
+  height: 1px;
+  background: var(--hairline);
+  margin: 8px 0 4px;
+}
+.tweaks-swatches {
+  grid-column: span 2;
+  display: flex;
+  gap: 6px;
+  padding: 4px 0;
+}
+.tweaks-swatches button {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--hairline-2);
+  cursor: pointer;
+}
+.tweaks-swatches button.active {
+  box-shadow: 0 0 0 2px var(--ink);
+}

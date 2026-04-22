@@ -1,0 +1,42 @@
+{
+  "name": "maxbridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only OAuth bridge that lets any Mac app talk to Claude Opus 4.7 through your own Claude Max subscription — no API key, no remote service in the loop.",
+  "scripts": {
+    "dev": "concurrently -n ui,proxy -c cyan,magenta \"npm run dev:ui\" \"npm run dev:proxy\"",
+    "dev:ui": "vite",
+    "dev:proxy": "tsx watch server/index.ts",
+    "start": "tsx server/index.ts",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preflight": "bash scripts/preflight.sh",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "vitest": "^2.0.5"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "homepage": "https://maxbridge.ai"
+}

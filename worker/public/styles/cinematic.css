@@ -1,0 +1,485 @@
+/* ===================================================================
+   HOW IT WORKS — CINEMATIC (light section, dark panel)
+   The outer section matches the cream page theme.
+   The inner .cine-stage is a dark auto-playing motion-graphics panel.
+   =================================================================== */
+
+:root { --ink:#1a1612; --cream:#f4efe5; --lime:#d4ff3a; --lime-dim:#9ab524; }
+
+/* ---------- Outer section (LIGHT) ---------- */
+.how-cine {
+  background: var(--cream, #f4efe5);
+  color: var(--ink, #1a1612);
+  padding: 140px 0 160px;
+  position: relative;
+  overflow: hidden;
+}
+.how-cine::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(26,22,18,0.06) 1px, transparent 1.5px);
+  background-size: 44px 44px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.how-cine .how-head {
+  position: relative; z-index: 2;
+  max-width: 980px; margin: 0 auto 64px;
+  text-align: center; padding: 0 24px;
+}
+.how-cine .sec-eyebrow {
+  font-family: var(--mono, ui-monospace, 'JetBrains Mono', monospace);
+  font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+  color: rgba(26,22,18,0.58);
+  margin-bottom: 22px;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.how-cine .sec-eyebrow::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink, #1a1612);
+}
+.how-cine .sec-h {
+  font-family: var(--serif, 'Canela', 'Ivar Display', Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(44px, 5.2vw, 80px);
+  line-height: 0.98; letter-spacing: -0.03em;
+  color: var(--ink, #1a1612);
+  text-wrap: balance;
+  margin: 0;
+}
+.how-cine .sec-h em {
+  font-style: italic;
+  color: var(--ink, #1a1612);
+  position: relative;
+}
+.how-cine .sec-h em::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 4px;
+  height: 8px; background: var(--lime, #d4ff3a);
+  z-index: -1; opacity: 0.55;
+}
+.how-cine .sec-sub {
+  font-family: var(--sans, 'Inter', -apple-system, sans-serif);
+  font-size: 16px; line-height: 1.6;
+  color: rgba(26,22,18,0.68);
+  max-width: 680px; margin: 26px auto 0;
+}
+
+/* ---------- Inner panel wrapper ---------- */
+.cine-panel {
+  position: relative; z-index: 2;
+  max-width: 1280px; margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* HUD strip — dark, fused to stage */
+.cine-hud {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(241,236,226,0.6);
+  padding: 16px 22px;
+  background: #050403;
+  border: 1px solid rgba(212,255,58,0.18);
+  border-bottom: 0;
+  position: relative; overflow: hidden;
+}
+.cine-hud::after {
+  /* moving hairline under the HUD */
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lime,#d4ff3a), transparent);
+  background-size: 40% 100%;
+  animation: hud-sweep 3.5s linear infinite;
+}
+@keyframes hud-sweep { 0% { background-position: -50% 0 } 100% { background-position: 150% 0 } }
+.cine-hud .hud-left, .cine-hud .hud-right { display: flex; align-items: center; gap: 12px; }
+.hud-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--lime, #d4ff3a);
+  box-shadow: 0 0 10px rgba(212,255,58,0.7);
+  animation: hud-blink 1.6s infinite;
+}
+@keyframes hud-blink { 0%, 55% { opacity: 1 } 60%, 100% { opacity: 0.3 } }
+
+/* ---------- STAGE (the dark auto-play motion panel) ---------- */
+.cine-stage {
+  position: relative;
+  height: 620px;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(212,255,58,0.07), transparent 55%),
+    linear-gradient(180deg, #0b0906 0%, #050403 100%);
+  border: 1px solid rgba(212,255,58,0.18);
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  align-items: center;
+  padding: 40px 48px;
+  gap: 24px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Animated back-grid layer */
+.cine-stage::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(212,255,58,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,255,58,0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, #000 40%, transparent 85%);
+  animation: grid-drift 24s linear infinite;
+}
+@keyframes grid-drift {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 44px 44px, 44px 44px; }
+}
+
+/* Scanline layer */
+.cine-stage::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(255,255,255,0.015) 3px,
+    rgba(255,255,255,0.015) 4px
+  );
+}
+
+/* Corner crosshairs */
+.cine-stage .corner {
+  position: absolute; width: 22px; height: 22px; z-index: 2;
+  border-color: rgba(212,255,58,0.55);
+  border-style: solid; border-width: 0;
+}
+.cine-stage .corner.tl { top: 10px; left: 10px;    border-top-width: 1px; border-left-width: 1px; }
+.cine-stage .corner.tr { top: 10px; right: 10px;   border-top-width: 1px; border-right-width: 1px; }
+.cine-stage .corner.bl { bottom: 10px; left: 10px; border-bottom-width: 1px; border-left-width: 1px; }
+.cine-stage .corner.br { bottom: 10px; right: 10px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* ---------- App cards column ---------- */
+.cine-col.left {
+  display: flex; flex-direction: column; gap: 14px;
+  position: relative; z-index: 3;
+}
+.cine-app {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(241,236,226,0.18);
+  background: rgba(212,255,58,0.02);
+  color: #f1ece2;
+  font-family: var(--sans, 'Inter', sans-serif);
+  position: relative;
+  transition: all 500ms cubic-bezier(0.22,1,0.36,1);
+}
+.cine-app::before {
+  /* left indicator bar that lights up on active phases */
+  content: ""; position: absolute; left: -1px; top: 0; bottom: 0;
+  width: 2px; background: var(--lime, #d4ff3a);
+  transform: scaleY(0); transform-origin: top;
+  transition: transform 500ms cubic-bezier(0.22,1,0.36,1);
+}
+.cine-app .ca-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: rgba(241,236,226,0.35);
+  flex-shrink: 0;
+  transition: all 500ms;
+}
+.cine-app .ca-name { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.cine-app .ca-sub {
+  margin-left: auto;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; letter-spacing: 0.18em;
+  color: rgba(241,236,226,0.45); text-transform: uppercase;
+}
+.how-cine[data-phase="1"] .cine-app::before,
+.how-cine[data-phase="2"] .cine-app::before,
+.how-cine[data-phase="3"] .cine-app::before,
+.how-cine[data-phase="4"] .cine-app::before { transform: scaleY(1); }
+.how-cine[data-phase="1"] .cine-app .ca-dot,
+.how-cine[data-phase="2"] .cine-app .ca-dot,
+.how-cine[data-phase="3"] .cine-app .ca-dot,
+.how-cine[data-phase="4"] .cine-app .ca-dot {
+  background: var(--lime, #d4ff3a);
+  box-shadow: 0 0 12px rgba(212,255,58,0.8);
+  animation: app-pulse 1.4s infinite;
+}
+/* stagger the pulse across apps */
+.cine-col.left .cine-app:nth-child(1) .ca-dot { animation-delay: 0.0s; }
+.cine-col.left .cine-app:nth-child(2) .ca-dot { animation-delay: 0.18s; }
+.cine-col.left .cine-app:nth-child(3) .ca-dot { animation-delay: 0.36s; }
+.cine-col.left .cine-app:nth-child(4) .ca-dot { animation-delay: 0.54s; }
+.cine-col.left .cine-app:nth-child(5) .ca-dot { animation-delay: 0.72s; }
+@keyframes app-pulse {
+  0%, 100% { transform: scale(1); opacity: 1 }
+  50%      { transform: scale(1.45); opacity: 0.55 }
+}
+
+/* ---------- HUB (center) ---------- */
+.cine-hub {
+  position: relative;
+  justify-self: center;
+  width: 220px; height: 220px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 3;
+}
+.hub-core {
+  position: relative; z-index: 3;
+  width: 140px; height: 140px;
+  border: 1.5px solid var(--lime, #d4ff3a);
+  background: radial-gradient(circle, rgba(212,255,58,0.12), #050403 70%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  box-shadow:
+    0 0 0 4px rgba(212,255,58,0.06),
+    0 0 50px rgba(212,255,58,0.32),
+    inset 0 0 30px rgba(212,255,58,0.08);
+  animation: core-breathe 3.4s ease-in-out infinite;
+}
+@keyframes core-breathe {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212,255,58,0.06), 0 0 50px rgba(212,255,58,0.32), inset 0 0 30px rgba(212,255,58,0.08); }
+  50%      { box-shadow: 0 0 0 8px rgba(212,255,58,0.10), 0 0 80px rgba(212,255,58,0.50), inset 0 0 40px rgba(212,255,58,0.14); }
+}
+.hub-core .hub-glyph { width: 60px; height: 34px; color: var(--lime, #d4ff3a); }
+.hub-core .hub-label {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; letter-spacing: 0.3em; color: rgba(241,236,226,0.88);
+}
+
+/* Rotating rings around core */
+.hub-ring {
+  position: absolute; inset: -30px;
+  border: 1px dashed rgba(212,255,58,0.35);
+  border-radius: 50%;
+  animation: ring-rot 22s linear infinite;
+}
+.hub-ring-outer {
+  position: absolute; inset: -60px;
+  border: 1px solid rgba(212,255,58,0.16);
+  border-top-color: rgba(212,255,58,0.55);
+  border-radius: 50%;
+  animation: ring-rot 14s linear infinite reverse;
+}
+.hub-ring-mid {
+  position: absolute; inset: -12px;
+  border: 1px solid rgba(212,255,58,0.2);
+  border-left-color: rgba(212,255,58,0.6);
+  border-right-color: rgba(212,255,58,0.6);
+  border-radius: 50%;
+  animation: ring-rot 9s linear infinite;
+}
+@keyframes ring-rot { to { transform: rotate(360deg); } }
+
+/* Expanding pulse waves */
+.hub-pulse {
+  position: absolute; width: 220px; height: 220px;
+  border-radius: 50%;
+  border: 1px solid rgba(212,255,58,0.5);
+  animation: hub-pulse 2.6s ease-out infinite;
+  pointer-events: none;
+}
+.hub-pulse.p2 { animation-delay: 0.9s; }
+.hub-pulse.p3 { animation-delay: 1.8s; }
+@keyframes hub-pulse {
+  0%   { transform: scale(0.55); opacity: 0.85; border-width: 2px; }
+  100% { transform: scale(1.9);  opacity: 0;    border-width: 1px; }
+}
+
+/* Tick marks around the hub */
+.hub-ticks {
+  position: absolute; inset: -80px; border-radius: 50%;
+  z-index: 1; pointer-events: none;
+  animation: ring-rot 40s linear infinite;
+}
+
+/* ---------- Subscription card (right) ---------- */
+.cine-col.right { z-index: 3; position: relative; }
+.cine-plan {
+  border: 1px solid rgba(212,255,58,0.28);
+  background:
+    linear-gradient(135deg, rgba(212,255,58,0.05), transparent 60%),
+    rgba(241,236,226,0.025);
+  padding: 26px 24px;
+  font-family: var(--sans, 'Inter', sans-serif);
+  position: relative;
+  overflow: hidden;
+}
+.cine-plan::before {
+  content: ""; position: absolute; top: 10px; right: 10px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lime, #d4ff3a);
+  box-shadow: 0 0 8px rgba(212,255,58,0.8);
+  animation: hud-blink 1.2s infinite;
+}
+.plan-label {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9.5px; letter-spacing: 0.24em;
+  color: rgba(241,236,226,0.6);
+  text-transform: uppercase;
+}
+.plan-name {
+  font-family: var(--serif, 'Canela', Georgia, serif);
+  font-style: italic; font-weight: 400;
+  font-size: 42px; letter-spacing: -0.02em;
+  color: #f1ece2;
+  line-height: 1; margin-top: 10px;
+}
+.plan-meta {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 16px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10.5px; letter-spacing: 0.14em;
+  color: rgba(241,236,226,0.68);
+  text-transform: uppercase;
+}
+.plan-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(241,236,226,0.35); }
+.plan-bill {
+  margin-top: 22px; padding-top: 16px;
+  border-top: 1px solid rgba(241,236,226,0.14);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10.5px; letter-spacing: 0.18em;
+  color: rgba(241,236,226,0.55);
+  text-transform: uppercase;
+}
+.plan-bill b {
+  display: block;
+  font-family: var(--serif, 'Canela', Georgia, serif);
+  font-style: italic; font-weight: 400;
+  font-size: 38px; color: var(--lime, #d4ff3a);
+  margin-top: 6px; letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+/* Data tag chip floating next to plan during ROUTE / ANSWER */
+.plan-tag {
+  position: absolute; top: 16px; left: -92px;
+  padding: 6px 10px;
+  border: 1px solid rgba(212,255,58,0.35);
+  background: #050403;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; letter-spacing: 0.16em;
+  color: var(--lime, #d4ff3a);
+  text-transform: uppercase;
+  opacity: 0; transform: translateX(10px);
+  transition: opacity 400ms, transform 400ms;
+  white-space: nowrap;
+}
+.how-cine[data-phase="2"] .plan-tag,
+.how-cine[data-phase="3"] .plan-tag { opacity: 1; transform: translateX(0); }
+
+/* ---------- SVG arcs + particles overlay ---------- */
+.cine-arcs {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 2;
+}
+.cine-orbs .orb { filter: drop-shadow(0 0 6px rgba(212,255,58,0.85)); }
+.how-cine[data-phase="0"] .cine-orbs,
+.how-cine[data-phase="1"] .cine-orbs { opacity: 0.15; transition: opacity 500ms; }
+.how-cine[data-phase="2"] .cine-orbs,
+.how-cine[data-phase="3"] .cine-orbs,
+.how-cine[data-phase="4"] .cine-orbs { opacity: 1; transition: opacity 500ms; }
+
+/* Dashed flow lines on the main arcs (stroke-dash animation) */
+.arc-flow {
+  stroke-dasharray: 4 8;
+  animation: arc-dash 1.4s linear infinite;
+}
+@keyframes arc-dash { to { stroke-dashoffset: -36; } }
+
+/* ---------- Caption ---------- */
+.cine-caption {
+  margin-top: 28px;
+  padding: 30px 34px;
+  background: #050403;
+  border: 1px solid rgba(212,255,58,0.18);
+  border-top: 0;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 30px;
+  align-items: start;
+}
+.cap-num {
+  font-family: var(--serif, 'Canela', Georgia, serif);
+  font-style: italic; font-weight: 400;
+  font-size: 72px; line-height: 1;
+  color: var(--lime, #d4ff3a);
+  letter-spacing: -0.03em;
+  text-shadow: 0 0 30px rgba(212,255,58,0.3);
+}
+.cap-head {
+  font-family: var(--serif, 'Canela', Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(30px, 3.2vw, 44px);
+  line-height: 1.05; letter-spacing: -0.02em;
+  color: #f1ece2;
+  margin: 0 0 12px;
+}
+.cap-body {
+  font-family: var(--sans, 'Inter', sans-serif);
+  font-size: 15px; line-height: 1.6;
+  color: rgba(241,236,226,0.72);
+  max-width: 640px; margin: 0;
+}
+
+/* ---------- Phase dots ---------- */
+.cine-dots {
+  display: flex;
+  margin-top: 20px;
+  background: var(--cream, #f4efe5);
+  border: 1px solid rgba(26,22,18,0.15);
+}
+.pd {
+  flex: 1; padding: 18px 20px;
+  border: 0; border-right: 1px solid rgba(26,22,18,0.12);
+  background: transparent;
+  color: rgba(26,22,18,0.5);
+  cursor: pointer; text-align: left;
+  display: flex; flex-direction: column; gap: 8px;
+  font-family: inherit;
+  transition: all 300ms;
+  position: relative;
+  overflow: hidden;
+}
+.pd:last-child { border-right: 0; }
+.pd span {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px; letter-spacing: 0.22em;
+}
+.pd b {
+  font-family: var(--serif, 'Canela', Georgia, serif);
+  font-style: italic; font-weight: 400;
+  font-size: 20px; letter-spacing: -0.02em;
+}
+.pd:hover { color: var(--ink, #1a1612); background: rgba(26,22,18,0.04); }
+.pd.on { color: var(--ink, #1a1612); background: rgba(212,255,58,0.18); }
+.pd.on span { color: rgba(26,22,18,0.75); }
+
+/* Progress bar inside active dot */
+.pd .pd-bar {
+  position: absolute; left: 0; bottom: 0; height: 2px;
+  width: 0%;
+  background: var(--ink, #1a1612);
+  transition: width 80ms linear;
+}
+.pd.on .pd-bar { background: var(--ink, #1a1612); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  .cine-stage {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 30px;
+    padding: 32px;
+  }
+  .cine-col.left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cine-hub { width: 170px; height: 170px; margin: 0 auto; }
+  .cine-arcs { display: none; }
+  .cine-dots { flex-wrap: wrap; }
+  .pd { flex: 1 1 40%; }
+  .cine-caption { grid-template-columns: 1fr; gap: 14px; padding: 22px; }
+  .plan-tag { display: none; }
+}

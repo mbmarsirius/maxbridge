@@ -1,3 +1,7 @@
+# ══════════════════════════════════════════════════════════════════
+# Maxbridge — top-level .gitignore
+# ══════════════════════════════════════════════════════════════════
+
 # macOS
 .DS_Store
 .AppleDouble
@@ -9,28 +13,71 @@ Icon?
 .vscode/
 *.swp
 *.swo
+*~
 
-# Local env
+# ───────────── Secrets — NEVER commit ─────────────
 .env
-.env.local
+.env.*
 *.local
+*.local.json
+*.local.toml
+*.local.ts
+*.keys.json
+*.keys.local.json
+*-keys.json
+*.keys.local
+.secrets.env
+.secrets/*
 
-# Node
+# Specific known secret-bearing files in this repo
+worker/maxbridge-jwt.keys.local.json
+worker/.stripe-ids.local
+src-tauri/.env.signing
+
+# Certificates / keys
+*.pem
+!server/license/pubkey.pem
+*.key
+*.crt
+*.p12
+*.mobileprovision
+
+# ───────────── Node ─────────────
 node_modules/
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.tsbuildinfo
 
-# Build artifacts
-dist/
-build/
+# ───────────── Rust (Tauri) ─────────────
 target/
+*.rs.bk
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# ───────────── Build artifacts ─────────────
+dist/
+dist-*/
+build/
+out/
 *.dmg
 *.app
-*.log
+*.appimage
 
-# Secrets
-*.pem
-*.key
-.stripe-ids.local
-*.keys.local.json
+# ───────────── Cloudflare Wrangler ─────────────
+.wrangler/
+wrangler.log
+.dev.vars
+
+# ───────────── Logs + tmp ─────────────
+*.log
+logs/
+.turbo/
+.next/
+.vite/
+coverage/
+.nyc_output/
+
+# Tauri-specific backups
+*.bak
+*.bak-*

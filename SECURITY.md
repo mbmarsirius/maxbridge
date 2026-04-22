@@ -15,8 +15,8 @@ Expected response time: within 48 hours. We'll triage, reply with next steps, an
 
 In scope:
 - The Maxbridge macOS app binary and its local HTTP proxy (`127.0.0.1:7423`)
-- The install script served by `maxbridge-license.marsirius.workers.dev/install.sh`
-- The install artifact at `maxbridge-license.marsirius.workers.dev/install.md`
+- The install script served by `install.marsirius.ai/install.sh`
+- The install artifact at `install.marsirius.ai/install.md`
 - The Cloudflare Worker backend (license minting, Stripe webhook — dormant in free build)
 
 Out of scope:

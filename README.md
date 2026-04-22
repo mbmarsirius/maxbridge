@@ -35,14 +35,14 @@ OpenClaw ──▶ Maxbridge (127.0.0.1:7423) ──▶ your Claude CLI ──�
 
 **The fast path — let your OpenClaw bot install it:**
 
-1. Download [**install-maxbridge.md**](https://maxbridge.marsirius.ai/install.md) (no card, no email).
+1. Download [**install-maxbridge.md**](https://install.marsirius.ai/install.md) (no card, no email).
 2. Drag the `.md` into your OpenClaw bot chat on the Mac where you run OpenClaw.
 3. Your bot reads the instruction and runs one `curl | bash`. Maxbridge downloads, installs, and asks you to complete `claude setup-token` in the browser (~45 seconds — the only manual step). When that's done, the bot wires up `~/.openclaw/openclaw.json`, kickstarts the OpenClaw gateway, and greets you on Opus 4.7.
 
 **The manual path** (if you prefer to install by hand):
 
 ```bash
-curl -fsSL "https://maxbridge-license.marsirius.workers.dev/install.sh?free=1" | bash
+curl -fsSL "https://install.marsirius.ai/install.sh?free=1" | bash
 ```
 
 Either way you end on the same result: Maxbridge running locally at `127.0.0.1:7423`, OpenClaw routed through it, Opus 4.7 answering under your Max plan.
@@ -78,12 +78,44 @@ The proxy is a generic local Anthropic endpoint on `127.0.0.1:7423` — any app 
 
 ## Architecture
 
-The repo will open-source the full stack in follow-up commits. Current contents:
+Everything that makes Maxbridge work is in this repo, MIT licensed, auditable:
 
-- **DMG releases** — signed-at-build `Maxbridge-v0.1.0.dmg` lives on the [Releases](https://github.com/mbmarsirius/maxbridge/releases) page.
-- **License, docs, security policy** — here at root.
+```
+maxbridge/
+├── server/           Node.js proxy + OAuth bridge + OpenAI-compatible translator
+│   ├── index.ts          entrypoint — starts the HTTP server, online poller, trial
+│   ├── proxy.ts          /v1/messages + /v1/chat/completions + /v1/license/* handlers
+│   ├── local-oauth-bridge.ts  spawns the Claude CLI with the user's keychain session
+│   ├── openai-compat.ts  translates OpenAI ChatCompletions ↔ Anthropic Messages
+│   └── license/          pure license-gate decision + store + online poller
+│
+├── src-tauri/        Tauri (Rust) app shell — produces the DMG
+│   ├── src/main.rs       spawns the bundled Node server, exposes menubar
+│   ├── tauri.conf.json   bundle config
+│   └── icons/            app icon set (rendered from brand/maxbridge-appicon.svg)
+│
+├── worker/           Cloudflare Worker — serves install.md + install.sh + static
+│   ├── src/              Hono router, JWT mint, md + sh template rendering
+│   ├── public/           landing HTML + brand SVGs + styles
+│   └── wrangler.toml     custom-domain routes for maxbridge.marsirius.ai +
+│                         install.marsirius.ai
+│
+├── tests/            74 client tests (vitest, NODE_ENV=test required)
+├── scripts/          build-bundle.sh, sign-setup.sh, sign-and-notarize.sh
+└── docs/             specs: license gate, stripe checkout, tauri bundle,
+                      design briefs for the landing + onboarding wizard
+```
 
-Source tree (coming): `server/` (Node proxy + OAuth bridge + OpenAI compat layer), `src-tauri/` (Rust wrapper), `worker/` (Cloudflare Worker that serves the install artifact).
+**The install chain:**
+
+1. User clicks **Install Maxbridge — Free** on the landing → browser downloads `install-maxbridge.md` from `install.marsirius.ai/install.md`
+2. User drags the `.md` into their OpenClaw bot chat. Bot reads the markdown and runs `curl -fsSL https://install.marsirius.ai/install.sh?free=1 | bash`
+3. The Worker mints an anonymous, long-lived JWT on the fly (no email, no payment) and inlines it into a fresh install.sh render
+4. install.sh preflights the Mac, installs Claude CLI via Homebrew if missing, downloads + SHA256-verifies the DMG from the GitHub release, installs `/Applications/Maxbridge.app`, opens the wizard
+5. User completes `claude setup-token` in the browser (~45 seconds — the only manual step; Maxbridge never sees the OAuth token)
+6. install.sh patches `~/.openclaw/openclaw.json` (timestamped backup), kickstarts the OpenClaw gateway, runs an end-to-end test to Opus 4.7, prints `REPORT_STATUS=success`
+
+No cloud state beyond the Worker that serves the install artifact. Your prompts never leave your Mac.
 
 ## Security
 

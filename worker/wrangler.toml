@@ -1,0 +1,52 @@
+name = "maxbridge-license"
+main = "src/index.ts"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Custom domain — marsirius.ai is Cloudflare-managed, so attaching a custom
+# domain here auto-provisions DNS + SSL. Single-host launch: landing + API
+# served from the same origin. Primary because workers.dev subdomain has
+# resolver quirks on some macOS setups (observed Apr 22, 2026).
+[[routes]]
+pattern = "maxbridge.marsirius.ai"
+custom_domain = true
+
+[[routes]]
+pattern = "install.marsirius.ai"
+custom_domain = true
+
+[[kv_namespaces]]
+binding = "LICENSES"
+id = "4e128fb0242f49ae9d41bf7014284a4b"
+preview_id = "091986510e634913acdd06a1b72b934e"
+
+# Static assets — v2 landing HTML + brand/ + styles/. Worker serves `GET /`
+# and any other GET that maps to a file in public/. Unmatched paths fall
+# through to Hono routes (license, install.sh, stripe/webhook, api/checkout).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[vars]
+# Non-secret config — committable.
+# Single-origin launch: Worker serves the landing, /api/checkout, and all
+# license endpoints from the same URL. LANDING_URL and INSTALL_API_URL point
+# at the same host for the launch; once marsirius.ai finishes Cloudflare
+# activation we wire two custom domains (maxbridge.marsirius.ai for human
+# surface, install.marsirius.ai for script-consumed endpoints) to the same
+# Worker.
+LANDING_URL = "https://maxbridge.marsirius.ai"
+INSTALL_API_URL = "https://install.marsirius.ai"
+FROM_EMAIL = "maxbridge@marsirius.ai"
+DMG_URL = "https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/Maxbridge-v0.1.0.dmg"
+DMG_SHA256 = "af99fdf3d6d05c5068534248228f37f091dcca08fd1712b44d46901d082d01c2"
+MAXBRIDGE_VERSION = "0.1.0"
+STRIPE_PRICE_ID = "price_1TOhm3Dm4Rth0zR4vSdxkx0j"
+
+# Secrets — NEVER hard-code. Set each via:
+#   wrangler secret put STRIPE_SECRET_KEY
+#   wrangler secret put STRIPE_WEBHOOK_SECRET
+#   wrangler secret put JWT_PRIVATE_KEY   # Ed25519 PKCS#8 PEM, single-line (base64 body only, no headers)
+#   wrangler secret put JWT_PUBLIC_KEY    # Ed25519 SPKI PEM, single-line
+#   wrangler secret put RESEND_API_KEY
