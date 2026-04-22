@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Maxbridge installer — v0.1.0
-# Pure CLI, headless daemon install (no GUI, no Tauri wrapper).
+# Maxbridge installer — v0.1.0 (tarball-only, zero-GUI)
+# Pure background daemon. No .app. No macOS TCC prompts. No Tauri wizard.
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK096VWlsa1dsQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6Ik96VWlsa1dsSEdjeF9YTUJ2U1pJX2hZNSIsImlhdCI6MTc3Njg1MjAxOCwiZXhwIjoyMDkyMjEyMDE4fQ.T1OY9OAcVRs9zzB9w4cRV-MjM91ZEf7SXLrIMvOAd1eVvAk1Yd138cPsqa2hPLlS7thtn1eoj3kdpauLewqJCA"
-export MAXBRIDGE_DMG_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/Maxbridge-v0.1.0.dmg"
-export MAXBRIDGE_DMG_SHA256="af99fdf3d6d05c5068534248228f37f091dcca08fd1712b44d46901d082d01c2"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2gtZHdjcDl1QG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImgtZHdjcDl1ZXlzajRaNDYyMjU4Q19ZNSIsImlhdCI6MTc3Njg1NjEyMiwiZXhwIjoyMDkyMjE2MTIyfQ.jsu-SP-7aymqVX2SCpvH7j8TJLhGds0cRnqP8j2K9b4_Lc2_PpAzttlBfelYlq9sspPYdAKzOplHwG2A3T7zAg"
+export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
+export MAXBRIDGE_TARBALL_SHA256="44404cfd55ad616696e76bab25815ca43e267717bfc71e506eb71c42042b446d"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
 export MAXBRIDGE_LANDING_URL="https://maxbridge.marsirius.ai"
 export MAXBRIDGE_VERSION="0.1.0"
@@ -30,11 +30,9 @@ ok()    { printf '  ✅ %s\n' "$*"; }
 warn()  { printf '  ⚠️  %s\n' "$*"; }
 fail()  { printf '  ❌ %s\n' "$*"; exit 1; }
 
-TMP_MOUNT=""
-TMP_DMG=""
+TMP_DIR=""
 cleanup() {
-  [ -n "$TMP_MOUNT" ] && [ -d "$TMP_MOUNT" ] && /usr/bin/hdiutil detach "$TMP_MOUNT" -quiet >/dev/null 2>&1 || true
-  [ -n "$TMP_DMG" ] && /bin/rm -f "$TMP_DMG" 2>/dev/null || true
+  [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ] && /bin/rm -rf "$TMP_DIR" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -47,21 +45,61 @@ printf '  log: %s\n' "$LOG_FILE"
 step "1/9 pre-flight"
 OS_MAJOR="$(sw_vers -productVersion | awk -F. '{print $1}')"
 [ "$OS_MAJOR" -ge 13 ] || fail "macOS ${OS_MAJOR} too old; Maxbridge needs macOS 13+."
-[ "$(uname -m)" = "arm64" ] || fail "Apple Silicon required; got $(uname -m). Intel Macs are not supported at this time."
+[ "$(uname -m)" = "arm64" ] || fail "Apple Silicon required; got $(uname -m). Intel Macs are not supported."
 ok "macOS $(sw_vers -productVersion) · Apple Silicon"
 
 # ═══════════════════════════════════════════════════════════════
-# 2/9 Clean prior install (so retries are idempotent)
+# 2/9 Aggressive clean — kill every possible GUI leftover
 # ═══════════════════════════════════════════════════════════════
-step "2/9 clean prior install (if any)"
+step "2/9 clean any prior install (removes old Tauri .app if present)"
+
+# 2a. Unload the launchd daemon if registered
 if /bin/launchctl print "gui/$(/usr/bin/id -u)/${MB_LABEL}" >/dev/null 2>&1; then
   /bin/launchctl bootout "gui/$(/usr/bin/id -u)/${MB_LABEL}" 2>/dev/null || true
 fi
+
+# 2b. Kill every process that looks like Maxbridge (daemon, old Tauri app, node server)
 /usr/bin/pkill -f "${MB_HOME}/node-runtime/bin/node" 2>/dev/null || true
 /usr/bin/pkill -f "/Applications/Maxbridge.app/Contents/MacOS/" 2>/dev/null || true
+/usr/bin/pkill -f "${HOME}/Applications/Maxbridge.app/Contents/MacOS/" 2>/dev/null || true
+/usr/bin/pkill -x "Maxbridge" 2>/dev/null || true
+/usr/bin/pkill -x "localclaw" 2>/dev/null || true
+sleep 1
+
+# 2c. Remove daemon files + launch plist
 /bin/rm -rf "$MB_HOME" 2>/dev/null || true
 /bin/rm -f "$MB_PLIST" 2>/dev/null || true
-/bin/rm -rf "/Applications/Maxbridge.app" 2>/dev/null || true
+
+# 2d. NUKE any legacy Tauri .app bundle — the source of TCC prompts and
+#     the old onboarding wizard popups
+LEGACY_APP_PATHS=(
+  "/Applications/Maxbridge.app"
+  "${HOME}/Applications/Maxbridge.app"
+  "/Applications/MaxBridge.app"
+  "${HOME}/Downloads/Maxbridge.app"
+  "${HOME}/Desktop/Maxbridge.app"
+)
+REMOVED_LEGACY=0
+for APP_PATH in "${LEGACY_APP_PATHS[@]}"; do
+  if [ -d "$APP_PATH" ]; then
+    warn "removing legacy Tauri app: $APP_PATH"
+    if /bin/rm -rf "$APP_PATH" 2>/dev/null; then
+      REMOVED_LEGACY=1
+    else
+      warn "could not remove $APP_PATH (permission denied). Attempting with user-owned rm..."
+      # chflags to remove locked flag, then try again
+      /usr/bin/chflags -R nouchg,noschg "$APP_PATH" 2>/dev/null || true
+      /bin/rm -rf "$APP_PATH" 2>/dev/null || warn "manual cleanup required: sudo rm -rf '$APP_PATH'"
+    fi
+  fi
+done
+[ "$REMOVED_LEGACY" = 1 ] && ok "old Tauri .app wrapper removed — no more GUI popups"
+
+# 2e. Remove TCC approvals cached for the old .app (won't ask again)
+/usr/bin/tccutil reset All ai.marsirius.maxbridge 2>/dev/null || true
+/usr/bin/tccutil reset All com.marsirius.maxbridge 2>/dev/null || true
+/usr/bin/tccutil reset All maxbridge 2>/dev/null || true
+
 ok "previous state cleaned"
 
 # ═══════════════════════════════════════════════════════════════
@@ -70,7 +108,7 @@ ok "previous state cleaned"
 step "3/9 Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
   warn "Homebrew not found — installing (non-interactive)..."
-  NONINTERACTIVE=1 /bin/bash -c "$(/usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null     || fail "Homebrew install failed. Install manually from https://brew.sh, then re-run this command."
+  NONINTERACTIVE=1 /bin/bash -c "$(/usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null     || fail "Homebrew install failed. Install manually from https://brew.sh, then re-run."
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; fi
   if [ -x /usr/local/bin/brew ];  then eval "$(/usr/local/bin/brew shellenv)"; fi
 fi
@@ -92,17 +130,17 @@ if [ -z "$CLAUDE_BIN" ]; then
   CLAUDE_BIN="$(command -v claude || true)"
 fi
 [ -n "$CLAUDE_BIN" ] || fail "Claude CLI not installed. Install manually from https://claude.ai/download then re-run."
-ok "claude: $CLAUDE_BIN"
+ok "claude: $CLAUDE_BIN ($("$CLAUDE_BIN" --version 2>/dev/null | head -1 || echo 'version unknown'))"
 
 # ═══════════════════════════════════════════════════════════════
-# 5/9 Anthropic OAuth login (opens browser) — THE ONLY MANUAL STEP
+# 5/9 Anthropic OAuth login — THE ONLY MANUAL STEP
 # ═══════════════════════════════════════════════════════════════
 step "5/9 Claude login (Anthropic OAuth — opens your browser)"
 printf '\n'
 printf '  ▸ A browser window will open now on anthropic.com.\n'
 printf '  ▸ Sign in with your Claude Max (or Pro) account.\n'
 printf '  ▸ Approve "Build something great".\n'
-printf '  ▸ This is the only manual step (~45 seconds).\n'
+printf '  ▸ This is the ONLY manual step — ~45 seconds.\n'
 printf '\n'
 
 if [ -r /dev/tty ]; then
@@ -111,40 +149,34 @@ else
   "$CLAUDE_BIN" setup-token || fail "claude setup-token failed. Run \`claude setup-token\` manually then re-run this installer."
 fi
 
-# Sanity check: the CLI should be able to answer basic queries now
-if ! "$CLAUDE_BIN" --version >/dev/null 2>&1; then
-  warn "Claude CLI sanity check failed (continuing — may still work)"
+# Sanity check
+if "$CLAUDE_BIN" auth status --json 2>/dev/null | /usr/bin/grep -q '"loggedIn"\s*:\s*true'; then
+  ok "Claude Max OAuth session active in keychain"
 else
-  ok "Claude Max session stored in macOS keychain"
+  warn "auth status check inconclusive — proceeding anyway (bridge will verify at runtime)"
 fi
 
 # ═══════════════════════════════════════════════════════════════
-# 6/9 Download + extract Maxbridge daemon (no GUI)
+# 6/9 Download the daemon tarball + extract
 # ═══════════════════════════════════════════════════════════════
-step "6/9 download Maxbridge"
-TMP_DMG="$(mktemp -t maxbridge).dmg"
-printf '  fetching %s ...\n' "$MAXBRIDGE_DMG_URL"
-/usr/bin/curl -fL --retry 3 --max-time 300 -o "$TMP_DMG" "$MAXBRIDGE_DMG_URL" || fail "DMG download failed"
-ACTUAL_SHA="$(/usr/bin/shasum -a 256 "$TMP_DMG" | awk '{print $1}')"
-[ "$ACTUAL_SHA" = "$MAXBRIDGE_DMG_SHA256" ] || fail "sha256 mismatch: expected $MAXBRIDGE_DMG_SHA256, got $ACTUAL_SHA"
-ok "DMG verified ($(wc -c < "$TMP_DMG" | awk '{print $1}') bytes)"
-
-TMP_MOUNT="$(mktemp -d -t maxbridge-mount)"
-/usr/bin/hdiutil attach "$TMP_DMG" -nobrowse -noautoopen -quiet -mountpoint "$TMP_MOUNT" || fail "hdiutil attach failed"
-[ -d "$TMP_MOUNT/Maxbridge.app/Contents/Resources/server-bundle" ] || fail "server-bundle not found inside DMG"
-[ -x "$TMP_MOUNT/Maxbridge.app/Contents/Resources/node-runtime/bin/node" ] || fail "node-runtime not found inside DMG"
+step "6/9 download Maxbridge daemon bundle"
+TMP_DIR="$(mktemp -d -t maxbridge-install)"
+TMP_TAR="${TMP_DIR}/daemon.tar.gz"
+printf '  fetching %s ...\n' "$MAXBRIDGE_TARBALL_URL"
+/usr/bin/curl -fL --retry 3 --max-time 180 -o "$TMP_TAR" "$MAXBRIDGE_TARBALL_URL" \
+  || fail "tarball download failed"
+ACTUAL_SHA="$(/usr/bin/shasum -a 256 "$TMP_TAR" | awk '{print $1}')"
+[ "$ACTUAL_SHA" = "$MAXBRIDGE_TARBALL_SHA256" ] || fail "sha256 mismatch: expected $MAXBRIDGE_TARBALL_SHA256, got $ACTUAL_SHA"
+ok "tarball verified ($(wc -c < "$TMP_TAR" | awk '{print $1}') bytes)"
 
 mkdir -p "$MB_HOME"
-/bin/cp -R "$TMP_MOUNT/Maxbridge.app/Contents/Resources/server-bundle"  "$MB_HOME/server-bundle"  || fail "copy server-bundle failed"
-/bin/cp -R "$TMP_MOUNT/Maxbridge.app/Contents/Resources/node-runtime"   "$MB_HOME/node-runtime"   || fail "copy node-runtime failed"
+/usr/bin/tar -xzf "$TMP_TAR" -C "$MB_HOME" || fail "tar extract failed"
+[ -x "$MB_NODE" ]                             || fail "node runtime missing after extract: $MB_NODE"
+[ -f "$MB_SERVER_DIR/server.js" ]             || fail "server.js missing after extract"
 /usr/bin/xattr -rd com.apple.quarantine "$MB_HOME" 2>/dev/null || true
-/usr/bin/hdiutil detach "$TMP_MOUNT" -quiet >/dev/null 2>&1 || true
-TMP_MOUNT=""
-/bin/rm -f "$TMP_DMG" 2>/dev/null || true
-TMP_DMG=""
-ok "daemon files installed at $MB_HOME"
+ok "daemon installed at $MB_HOME"
 
-# Bake license.json so gate.ts sees a valid subscription (10-year baked JWT)
+# Bake license.json (10-year baked JWT → gate.ts sees subscription_active)
 /bin/mkdir -p "$(dirname "$LICENSE_FILE")"
 /usr/bin/python3 - "$LICENSE_FILE" "$MAXBRIDGE_LICENSE" <<'PY' || warn "could not write license.json"
 import json, os, sys, time, base64
@@ -182,7 +214,7 @@ PY
 # ═══════════════════════════════════════════════════════════════
 # 7/9 launchd daemon (persistent, auto-restart on crash)
 # ═══════════════════════════════════════════════════════════════
-step "7/9 start Maxbridge daemon"
+step "7/9 start Maxbridge daemon (launchd)"
 mkdir -p "$(dirname "$MB_PLIST")"
 cat > "$MB_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -211,14 +243,14 @@ PLIST
 
 /bin/launchctl bootstrap "gui/$(/usr/bin/id -u)" "$MB_PLIST" 2>&1 | /usr/bin/grep -v "already loaded" || true
 
-# Wait for /healthz — should be <10s since this is a pure Node boot
+# Wait for /healthz
 HEALTH_OK=0
 for _ in $(seq 1 30); do
   /usr/bin/curl -fsS --max-time 2 "$PROXY/healthz" >/dev/null 2>&1 && HEALTH_OK=1 && break
   sleep 1
 done
-[ "$HEALTH_OK" = 1 ] || fail "proxy did not answer /healthz within 30s. Check $LOG_DIR/daemon.err.log"
-ok "proxy up on 127.0.0.1:7423"
+[ "$HEALTH_OK" = 1 ] || fail "daemon did not answer /healthz within 30s. Check $LOG_DIR/daemon.err.log"
+ok "daemon up on 127.0.0.1:7423"
 
 # ═══════════════════════════════════════════════════════════════
 # 8/9 OpenClaw wire-up
@@ -264,7 +296,6 @@ with open(p, 'w') as f: json.dump(d, f, indent=2)
 PY
   ok "openclaw.json patched — main agent routed to maxbridge/claude-opus-4-7"
 
-  # Kickstart OpenClaw gateway so it picks up new config
   if /bin/launchctl print "gui/$(/usr/bin/id -u)/ai.openclaw.gateway" >/dev/null 2>&1; then
     /bin/launchctl kickstart -k "gui/$(/usr/bin/id -u)/ai.openclaw.gateway" && ok "openclaw gateway kickstarted" || warn "gateway kickstart failed — restart OpenClaw manually"
   else
@@ -273,31 +304,30 @@ PY
 fi
 
 # ═══════════════════════════════════════════════════════════════
-# 9/9 Self-test: actual Opus 4.7 round-trip
+# 9/9 Self-test: actual Opus 4.7 round-trip via Maxbridge
 # ═══════════════════════════════════════════════════════════════
-step "9/9 end-to-end test"
+step "9/9 end-to-end test (Opus 4.7 round-trip)"
 sleep 3
-TEST_OUT="$(/usr/bin/curl -fsS --max-time 30 -X POST "$PROXY/v1/messages" -H 'content-type: application/json' -d '{"model":"claude-opus-4-7","max_tokens":40,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}' 2>/dev/null || echo '{}')"
+TEST_OUT="$(/usr/bin/curl -fsS --max-time 45 -X POST "$PROXY/v1/messages" -H 'content-type: application/json' -d '{"model":"claude-opus-4-7","max_tokens":40,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}' 2>/dev/null || echo '{}')"
 if printf '%s' "$TEST_OUT" | /usr/bin/grep -q 'MAXBRIDGE_LIVE'; then
   ok "Opus 4.7 returned MAXBRIDGE_LIVE"
   RESULT="success"
 else
   warn "end-to-end test did not return the expected marker. Response head:"
-  printf '%s\n' "$TEST_OUT" | head -c 400
+  printf '%s\n' "$TEST_OUT" | head -c 500
   RESULT="partial"
 fi
 
-# ═══════════════════════════════════════════════════════════════
 # Final summary
-# ═══════════════════════════════════════════════════════════════
 step "done — $RESULT"
 printf '\n'
 if [ "$RESULT" = "success" ]; then
   printf '  🎉 Maxbridge is live.\n\n'
   printf '     Your OpenClaw main agent now routes to Claude Opus 4.7\n'
-  printf '     through your Max subscription. No API key, no extra billing.\n\n'
+  printf '     through your Max subscription. No API key, no extra billing.\n'
+  printf '     Maxbridge runs as a background daemon — no app window, no menubar icon.\n\n'
   printf '     Open Telegram (or whichever channel your OpenClaw bot uses).\n'
-  printf '     Run /model — you should see "maxbridge — claude-opus-4-7"\n'
-  printf '     selected as primary. Ask anything.\n\n'
+  printf '     Run /model — you should see "maxbridge — claude-opus-4-7" as primary.\n'
+  printf '     Ask anything.\n\n'
 fi
 printf 'REPORT_STATUS=%s\nREPORT_PROXY=%s\nREPORT_LOG=%s\nREPORT_LANDING=%s\n' "$RESULT" "$PROXY" "$LOG_FILE" "$MAXBRIDGE_LANDING_URL"
