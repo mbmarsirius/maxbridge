@@ -220,9 +220,35 @@ export async function probeLocalBridge(
     };
   }
 
-  // 2. Is the CLI logged in under OAuth (not a BYO API key)?
-  // NOTE: The correct flag for `claude auth status` is `--json` (default) / `--text`,
-  // NOT `--output-format json`. Verified against claude 2.1.x on this Mac.
+  // 2. FAST PATH — if CLAUDE_CODE_OAUTH_TOKEN is present in env, trust it.
+  //
+  // Claude CLI 2.1.90+ dropped the `--json` flag on `claude auth status`,
+  // so the legacy auth-status probe below can no longer reliably detect
+  // OAuth state. When the installer has captured the long-lived token from
+  // `claude setup-token` output and injected it into the daemon's launchd
+  // plist (or when the user exported it in their shell RCs the bridge
+  // scans), the most honest signal is "is there a plausible oauth token
+  // in env?". If yes, treat the bridge as ready without calling auth-status.
+  const envToken = env.CLAUDE_CODE_OAUTH_TOKEN ?? '';
+  if (envToken.startsWith('sk-ant-oat01-') && envToken.length >= 40) {
+    const readyProbe: LocalBridgeProbe = {
+      state: 'ready',
+      claudeBinaryDetected: true,
+      claudeVersion,
+      loggedIn: true,
+      authMethod: 'oauth_token',
+      provider: 'firstParty',
+      bridgePath,
+      note: `OAuth token detected in environment. ${PROBE_NOTE}`,
+    };
+    probeCache = { at: Date.now(), result: readyProbe };
+    return readyProbe;
+  }
+
+  // 3. Legacy path — try `claude auth status --json` for older CLIs.
+  // This path returns cli-not-logged-in on claude 2.1.90+ where --json is
+  // rejected. That's a correct failure signal on a Mac with no captured
+  // token: the installer should run claude setup-token + token capture.
   const authRun = await serializeCli(() => run(cfg.claudeBinary, ['auth', 'status', '--json'], env, 5000));
   const { loggedIn, authMethod, provider } = parseAuthStatus(authRun.stdout || authRun.stderr);
 
@@ -235,7 +261,7 @@ export async function probeLocalBridge(
       authMethod,
       provider,
       bridgePath,
-      note: `Claude CLI is installed but not logged in under OAuth. Run \`claude setup-token\` on this Mac (GUI required once). ${PROBE_NOTE}`,
+      note: `Claude CLI is installed but no OAuth token detected. Run \`claude setup-token\` on this Mac, then re-run the Maxbridge installer so it can capture and persist the token for the daemon. ${PROBE_NOTE}`,
     };
   }
 
