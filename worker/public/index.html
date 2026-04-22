@@ -421,32 +421,35 @@
       </div>
     </div>
 
-    <!-- Hero CTAs -->
-    <div id="waitlist" class="waitlist-block">
+    <!-- ───────── Hero CTA — OpenClaw-style one-paste terminal ───────── -->
+    <div id="waitlist" class="waitlist-block" style="margin-top:36px;">
       <div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
-          <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free</a>
-          <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
+        <!-- Primary install: terminal one-paste, HERO-sized, OpenClaw-style -->
+        <div style="padding:22px 24px;background:var(--ink);color:var(--paper);border-radius:14px;box-shadow:6px 6px 0 rgba(0,0,0,0.12),inset 0 0 0 1px rgba(212,255,58,0.14);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+            <span style="color:var(--lime);font-family:var(--mono);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Install · one paste in Terminal</span>
+            <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;color:rgba(241,236,226,0.5);">~90 seconds · no bot · no DMG</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <code id="install-cmd" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(14px, 1.6vw, 18px);color:var(--paper);letter-spacing:0.02em;padding:12px 0;">$ curl -fsSL https://install.marsirius.ai | bash</code>
+            <button type="button" onclick="const t=document.getElementById('install-cmd').textContent.replace(/^\$\s*/,'');navigator.clipboard.writeText(t).then(()=>{this.textContent='✓ Copied';setTimeout(()=>{this.textContent='Copy';},2000);});" style="flex-shrink:0;background:var(--lime);color:var(--ink);border:none;padding:10px 22px;font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:6px;font-weight:700;">Copy</button>
+          </div>
+          <p style="margin:12px 0 0 0;font-family:var(--sans);font-size:13px;line-height:1.55;color:rgba(241,236,226,0.7);">
+            Installs everything for you — Homebrew, Claude CLI, Maxbridge, and sets <strong style="color:var(--paper);">Claude Opus 4.7</strong> as the default provider in OpenClaw. The only manual step is a one-time Claude login in your browser (~45s).
+          </p>
         </div>
-        <p class="form-micro">100% free · MIT licensed · Built by one person team · Works in 90 seconds</p>
 
-        <!-- Terminal one-paste install — bulletproof (no bot needed) -->
-        <div style="margin-top:18px;padding:14px 16px;background:var(--ink);color:var(--paper);border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="color:var(--lime);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;">or paste in Terminal</span>
-          <code id="install-cmd" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;color:var(--paper);">curl -fsSL https://install.marsirius.ai | bash</code>
-          <button type="button" onclick="const t=document.getElementById('install-cmd').textContent;navigator.clipboard.writeText(t).then(()=>{this.textContent='✓ copied';setTimeout(()=>{this.textContent='Copy';},2000);});" style="flex-shrink:0;background:var(--lime);color:var(--ink);border:none;padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;font-weight:600;">Copy</button>
-        </div>
-        <p style="margin-top:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.04em;color:var(--ink-3);">
-          Installs everything (Homebrew, Claude CLI, Maxbridge.app) — takes ~90 seconds. Also mirrored on
-          <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline;text-underline-offset:2px;">GitHub Releases ↗</a>.
+        <!-- Secondary options — small, deliberate, not competing with the hero command -->
+        <p style="margin-top:16px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--ink-3);text-align:center;">
+          <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline;text-underline-offset:3px;">See the source on GitHub ↗</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline;text-underline-offset:3px;">Inspect release assets ↗</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline;text-underline-offset:3px;">Drag-drop for your bot ↗</a>
         </p>
-        <div class="form-success" role="status" aria-live="polite">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-            <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4"/>
-            <path d="M5.5 9 L8 11.5 L12.5 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>You're in. Check your inbox for the install file.</span>
-        </div>
+        <p style="margin-top:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.05em;color:var(--ink-3);text-align:center;">
+          100% free · MIT licensed · Built by one person team · Apple Silicon · macOS 13+
+        </p>
       </div>
     </div>
   </div>
@@ -624,32 +627,43 @@
 <section class="big-cta" id="install">
   <div class="wrap">
     <h2 class="cta-h">
-      Three steps. <em>Free...</em>
+      One command. <em>No bots, no DMG drag.</em>
     </h2>
-    <ol class="install-steps" style="list-style:none;padding:0;margin:32px 0 40px;display:grid;gap:14px;max-width:780px;margin-left:auto;margin-right:auto;text-align:left;font-family:var(--sans);">
-      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
-        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">01 · Download</span>
-        <span>Grab the installer. No card, no email required. Just download.</span>
-      </li>
-      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
-        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">02 · Drop</span>
-        <span>Drag the installer into your OpenClaw bot chat — any channel (Telegram, WhatsApp, Discord, iMessage).</span>
-      </li>
-      <li style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;padding:14px 18px;border:1px solid rgba(241,236,226,0.18);border-radius:10px;">
-        <span style="font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--lime);text-transform:uppercase;">03 · Done</span>
-        <span>Your OpenClaw agent installs Maxbridge itself, runs <code>claude setup-token</code> in the browser (the only manual step, ~45s), then greets you. You're on your Max plan.</span>
-      </li>
-    </ol>
-
-    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;">
-      <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" class="nav-cta" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Install Maxbridge — Free <span class="arr">→</span></a>
-      <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);text-decoration:none;">See the source <span>→</span></a>
-    </div>
-    <p class="form-micro" style="text-align:center;margin-top:16px;">100% free · MIT licensed · No card · No email</p>
-    <p style="text-align:center;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--ink-3);">
-      Prefer to inspect first? Download each asset (install.md, install.sh, DMG + SHA256) from
-      <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--paper);text-decoration:underline;text-underline-offset:2px;">GitHub Releases ↗</a>.
+    <p class="cta-sub" style="max-width:640px;margin:16px auto 36px;text-align:center;font-size:16px;line-height:1.6;color:rgba(241,236,226,0.72);">
+      Paste this in your Mac's Terminal. Everything installs automatically — Homebrew, Claude CLI, Maxbridge, OpenClaw wire-up. Opus 4.7 is set as your default model before the script finishes.
     </p>
+
+    <!-- HUGE centered terminal block — the real primary CTA -->
+    <div style="max-width:780px;margin:0 auto;padding:28px 32px;background:#0d0a07;border:1px solid rgba(212,255,58,0.22);border-radius:14px;box-shadow:8px 8px 0 rgba(0,0,0,0.22);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#ff5f56;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#ffbd2e;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--lime);"></span>
+        <span style="margin-left:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;color:rgba(241,236,226,0.5);text-transform:uppercase;">Terminal · ~/</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <code id="install-cmd-2" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-family:var(--mono);font-size:clamp(15px, 1.8vw, 20px);color:var(--paper);letter-spacing:0.02em;">$ curl -fsSL https://install.marsirius.ai | bash</code>
+        <button type="button" onclick="const t=document.getElementById('install-cmd-2').textContent.replace(/^\$\s*/,'');navigator.clipboard.writeText(t).then(()=>{this.textContent='✓ Copied';setTimeout(()=>{this.textContent='Copy';},2000);});" style="flex-shrink:0;background:var(--lime);color:var(--ink);border:none;padding:11px 26px;font-family:var(--mono);font-size:13px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border-radius:6px;font-weight:700;">Copy</button>
+      </div>
+    </div>
+
+    <div style="max-width:640px;margin:28px auto 0;text-align:center;font-family:var(--mono);font-size:11.5px;line-height:1.8;letter-spacing:0.04em;color:rgba(241,236,226,0.56);">
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Installs Homebrew + Claude CLI if missing</div>
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Downloads Maxbridge binary, SHA256-verified</div>
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Runs <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">claude setup-token</code> — you log in once (~45s)</div>
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Patches <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">~/.openclaw/openclaw.json</code> with timestamped backup</div>
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Sets Opus 4.7 as default model + kickstarts OpenClaw gateway</div>
+      <div><span style="color:var(--lime);">✓</span> &nbsp;Self-tests end-to-end, exits <code style="background:rgba(241,236,226,0.08);padding:1px 6px;border-radius:3px;">REPORT_STATUS=success</code></div>
+    </div>
+
+    <p style="text-align:center;margin-top:30px;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:rgba(241,236,226,0.45);">
+      <a href="https://github.com/mbmarsirius/maxbridge" target="_blank" rel="noopener" style="color:var(--paper);text-decoration:underline;text-underline-offset:3px;">See the source ↗</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/mbmarsirius/maxbridge/releases/tag/v0.1.0" target="_blank" rel="noopener" style="color:var(--paper);text-decoration:underline;text-underline-offset:3px;">Inspect release + SHA256 ↗</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/install-maxbridge.md" target="_blank" rel="noopener" style="color:var(--paper);text-decoration:underline;text-underline-offset:3px;">Drag-drop for your bot ↗</a>
+    </p>
+    <p class="form-micro" style="text-align:center;margin-top:10px;">100% free · MIT licensed · No card · No email</p>
   </div>
 </section>
 
