@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2gtZHdjcDl1QG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImgtZHdjcDl1ZXlzajRaNDYyMjU4Q19ZNSIsImlhdCI6MTc3Njg1NjEyMiwiZXhwIjoyMDkyMjE2MTIyfQ.jsu-SP-7aymqVX2SCpvH7j8TJLhGds0cRnqP8j2K9b4_Lc2_PpAzttlBfelYlq9sspPYdAKzOplHwG2A3T7zAg"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2RrNTN4VDc2QG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImRrNTN4VDc2Tk90SWdYMmowZmZ0T29kUCIsImlhdCI6MTc3Njg1NzMxMywiZXhwIjoyMDkyMjE3MzEzfQ.XP5tHFxJ1iYn1PgnBfYtvaPrb3lEFf61Kf7yMvRUCg8urMB7twAqUloX5YgtJw84M4z5pIJXjm-MtZ7R2DOBDw"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="44404cfd55ad616696e76bab25815ca43e267717bfc71e506eb71c42042b446d"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -149,11 +149,76 @@ else
   "$CLAUDE_BIN" setup-token || fail "claude setup-token failed. Run \`claude setup-token\` manually then re-run this installer."
 fi
 
-# Sanity check
-if "$CLAUDE_BIN" auth status --json 2>/dev/null | /usr/bin/grep -q '"loggedIn"\s*:\s*true'; then
-  ok "Claude Max OAuth session active in keychain"
+# Flush tee buffers so the setup-token output is in the log file before we grep it
+sync || true
+sleep 0.5
+
+# CRITICAL: claude setup-token v2.1.90 prints the long-lived OAuth token to
+# stdout ("sk-ant-oat01-…") and instructs the user to manually
+# `export CLAUDE_CODE_OAUTH_TOKEN=<token>`. It does NOT save the token to the
+# keychain or any config file. If we don't capture and persist this token, the
+# daemon we start in step 7 has no way to authenticate when it spawns `claude`
+# and /v1/messages will return empty {} — this was the #1 cause of
+# REPORT_STATUS=partial in cold-user tests (2026-04-22).
+CLAUDE_OAUTH_TOKEN=""
+if [ -f "$LOG_FILE" ]; then
+  CLAUDE_OAUTH_TOKEN=$(/usr/bin/python3 - "$LOG_FILE" <<'PY' || true
+import re, sys
+try:
+    with open(sys.argv[1], 'r', errors='replace') as f:
+        text = f.read()
+except Exception:
+    sys.exit(0)
+# Strip ANSI colour codes so multi-line regex works cleanly
+text = re.sub(r'[[0-9;]*m', '', text)
+# Token starts with sk-ant-oat01- and is base64url chars, possibly wrapped
+# across terminal lines. Collect the chain of base64url segments.
+m = re.search(r'(sk-ant-oat01-[A-Za-z0-9_-]+(?:[
+s]+[A-Za-z0-9_-]+)*)', text)
+if m:
+    joined = re.sub(r's+', '', m.group(1))
+    if len(joined) >= 60:
+        print(joined)
+PY
+)
+fi
+
+if [ -n "$CLAUDE_OAUTH_TOKEN" ]; then
+  ok "Claude Max OAuth token captured (${#CLAUDE_OAUTH_TOKEN} chars)"
+  # Persist token for daemon + user shells. Three destinations:
+  # 1. ~/.maxbridge/.env (machine-readable, 600 perms) — read by install
+  #    hooks or by user manually
+  # 2. The launchd plist's EnvironmentVariables (step 7) — daemon boots with
+  #    the token in env, so spawned claude CLI inherits it
+  # 3. ~/.zshrc — user's own terminal sessions have it, matching Anthropic's
+  #    own onboarding advice
+  mkdir -p "$MB_HOME"
+  umask 077
+  /bin/cat > "$MB_HOME/.env" <<ENV
+# Maxbridge daemon environment — DO NOT commit. Generated $(date '+%Y-%m-%d %H:%M:%S').
+CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_OAUTH_TOKEN
+ENV
+  chmod 600 "$MB_HOME/.env"
+
+  # Append to ~/.zshrc (idempotent — strip prior CLAUDE_CODE_OAUTH_TOKEN lines)
+  if [ -n "${HOME:-}" ]; then
+    ZSHRC="${HOME}/.zshrc"
+    touch "$ZSHRC"
+    # Remove any prior export of CLAUDE_CODE_OAUTH_TOKEN to avoid duplicates
+    /usr/bin/sed -i '' '/^export CLAUDE_CODE_OAUTH_TOKEN=/d' "$ZSHRC" 2>/dev/null || true
+    /bin/echo "export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_OAUTH_TOKEN"" >> "$ZSHRC"
+    ok "token exported in ~/.zshrc for your terminal sessions"
+  fi
 else
-  warn "auth status check inconclusive — proceeding anyway (bridge will verify at runtime)"
+  warn "could not extract OAuth token from claude setup-token output"
+  warn "the daemon may fall back to keychain lookup; if /v1/messages fails,"
+  warn "run manually:  export CLAUDE_CODE_OAUTH_TOKEN=<token>  then re-run this installer"
+fi
+
+# Also sanity-check: some users already have a valid token from a prior install
+if [ -z "$CLAUDE_OAUTH_TOKEN" ] && [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  CLAUDE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"
+  ok "using existing CLAUDE_CODE_OAUTH_TOKEN from current shell"
 fi
 
 # ═══════════════════════════════════════════════════════════════
@@ -216,6 +281,17 @@ PY
 # ═══════════════════════════════════════════════════════════════
 step "7/9 start Maxbridge daemon (launchd)"
 mkdir -p "$(dirname "$MB_PLIST")"
+
+# Embed the captured OAuth token directly in the plist env so the daemon — and
+# any `claude` CLI it spawns — inherits the credential at boot without
+# requiring ~/.zshrc sourcing or keychain access. This is what unblocks
+# /v1/messages for a clean install.
+PLIST_OAUTH_ENTRY=""
+if [ -n "$CLAUDE_OAUTH_TOKEN" ]; then
+  # XML-escape the token (it's base64url so no entities needed, but be safe)
+  PLIST_OAUTH_ENTRY="        <key>CLAUDE_CODE_OAUTH_TOKEN</key><string>${CLAUDE_OAUTH_TOKEN}</string>"
+fi
+
 cat > "$MB_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -236,10 +312,14 @@ cat > "$MB_PLIST" <<PLIST
         <key>NODE_ENV</key><string>production</string>
         <key>HOME</key><string>${HOME}</string>
         <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${HOME}/.local/bin</string>
+${PLIST_OAUTH_ENTRY}
     </dict>
 </dict>
 </plist>
 PLIST
+
+# Lock down plist perms (contains OAuth token)
+chmod 600 "$MB_PLIST" 2>/dev/null || true
 
 /bin/launchctl bootstrap "gui/$(/usr/bin/id -u)" "$MB_PLIST" 2>&1 | /usr/bin/grep -v "already loaded" || true
 
