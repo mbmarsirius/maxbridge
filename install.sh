@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2Z4TVZHVTNRQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImZ4TVZHVTNRQmhMX2FTOUVaempuTkdzTyIsImlhdCI6MTc3Njg1ODkxMSwiZXhwIjoyMDkyMjE4OTExfQ.-yzgjWMGoz2Dh6nOIeoQ8mawvaQXlPKOWK2iTSiGSm9hsPVicj1hI1LxXIdzjEJ92M7vPOkg8cFJ1T8AphNHDA"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2RiSVc1UjNxQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImRiSVc1UjNxZnlLZjJnSlNObzVSS1FwQyIsImlhdCI6MTc3Njg1OTEyOCwiZXhwIjoyMDkyMjE5MTI4fQ.oIghYsgh-IFIy1SqU7sxtWNLjEbvYoUzF5CYzndBHg4tCp-rONm2zz0-5lFbVrBkJxq3emr4dXjAv35Z8DcfCg"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="b2dc73ac7ca68b42dd68174a02e4e43f9e8f1821e1c1e148a792481a5f16a2ad"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -143,6 +143,23 @@ printf '  ▸ Approve "Build something great".\n'
 printf '  ▸ This is the ONLY manual step — ~45 seconds.\n'
 printf '\n'
 
+# BEFORE setup-token runs, aggressively wipe any existing CLAUDE_CODE_OAUTH_TOKEN
+# from shell RC files. Reason: setup-token creates a NEW long-lived token and
+# Anthropic invalidates the previous one for this account. If an OLD token is
+# left in ~/.zshrc (from a prior install, or from a different user sharing this
+# Mac), the daemon could pick it up via the bridge's shell-RC fallback scan and
+# use an already-invalidated credential — that was the ghost bug behind
+# REPORT_STATUS=partial on Macs that had been through multiple installs or
+# multiple Anthropic accounts (e.g. a couple sharing one Mac for beta testing).
+for RC in "${HOME}/.zshrc" "${HOME}/.zprofile" "${HOME}/.bash_profile" "${HOME}/.profile"; do
+  if [ -f "$RC" ]; then
+    /usr/bin/sed -i '' '/^export CLAUDE_CODE_OAUTH_TOKEN=/d' "$RC" 2>/dev/null || true
+  fi
+done
+# Also unset in the current shell so the fallback we removed below can't pick up
+# the stale value during this installer run.
+unset CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
+
 if [ -r /dev/tty ]; then
   "$CLAUDE_BIN" setup-token </dev/tty || fail "claude setup-token did not complete. Run \`claude setup-token\` manually then re-run this installer."
 else
@@ -175,42 +192,34 @@ if [ -f "$LOG_FILE" ]; then
   ' "$LOG_FILE" | /usr/bin/tr -d '[:space:]' | /usr/bin/grep -oE 'sk-ant-oat01-[A-Za-z0-9_-]+' | /usr/bin/head -1)
 fi
 
-if [ -n "$CLAUDE_OAUTH_TOKEN" ]; then
-  ok "Claude Max OAuth token captured (${#CLAUDE_OAUTH_TOKEN} chars)"
-  # Persist token for daemon + user shells. Three destinations:
-  # 1. ~/.maxbridge/.env (machine-readable, 600 perms) — read by install
-  #    hooks or by user manually
-  # 2. The launchd plist's EnvironmentVariables (step 7) — daemon boots with
-  #    the token in env, so spawned claude CLI inherits it
-  # 3. ~/.zshrc — user's own terminal sessions have it, matching Anthropic's
-  #    own onboarding advice
-  mkdir -p "$MB_HOME"
-  umask 077
-  /bin/cat > "$MB_HOME/.env" <<ENV
+if [ -z "$CLAUDE_OAUTH_TOKEN" ]; then
+  # No fallback to prior env tokens — setup-token just invalidated any prior
+  # token for this account. If we couldn't capture the new one, we fail loudly
+  # so the user can paste it manually and re-run.
+  fail "Could not capture the OAuth token from claude setup-token output. Open $LOG_FILE, find the 'sk-ant-oat01-…' line, then re-run with: CLAUDE_CODE_OAUTH_TOKEN=<token> bash <(curl -fsSL https://raw.githubusercontent.com/mbmarsirius/maxbridge/main/install.sh)"
+fi
+
+ok "Claude Max OAuth token captured (${#CLAUDE_OAUTH_TOKEN} chars)"
+# Persist token for daemon + user shells. Three destinations:
+#   1. ~/.maxbridge/.env (600 perms, machine-readable)
+#   2. launchd plist (step 7) — daemon inherits the token at boot, and every
+#      `claude` subprocess it spawns inherits it from daemon's env
+#   3. ~/.zshrc export — user's own terminal sessions pick it up too
+mkdir -p "$MB_HOME"
+umask 077
+/bin/cat > "$MB_HOME/.env" <<ENV
 # Maxbridge daemon environment — DO NOT commit. Generated $(date '+%Y-%m-%d %H:%M:%S').
 CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_OAUTH_TOKEN
 ENV
-  chmod 600 "$MB_HOME/.env"
+chmod 600 "$MB_HOME/.env"
 
-  # Append to ~/.zshrc (idempotent — strip prior CLAUDE_CODE_OAUTH_TOKEN lines)
-  if [ -n "${HOME:-}" ]; then
-    ZSHRC="${HOME}/.zshrc"
-    touch "$ZSHRC"
-    # Remove any prior export of CLAUDE_CODE_OAUTH_TOKEN to avoid duplicates
-    /usr/bin/sed -i '' '/^export CLAUDE_CODE_OAUTH_TOKEN=/d' "$ZSHRC" 2>/dev/null || true
-    /bin/echo "export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_OAUTH_TOKEN"" >> "$ZSHRC"
-    ok "token exported in ~/.zshrc for your terminal sessions"
-  fi
-else
-  warn "could not extract OAuth token from claude setup-token output"
-  warn "the daemon may fall back to keychain lookup; if /v1/messages fails,"
-  warn "run manually:  export CLAUDE_CODE_OAUTH_TOKEN=<token>  then re-run this installer"
-fi
-
-# Also sanity-check: some users already have a valid token from a prior install
-if [ -z "$CLAUDE_OAUTH_TOKEN" ] && [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-  CLAUDE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"
-  ok "using existing CLAUDE_CODE_OAUTH_TOKEN from current shell"
+# Write fresh ~/.zshrc export (the pre-setup-token sed already removed any
+# stale prior line, so this just appends the new valid token).
+if [ -n "${HOME:-}" ]; then
+  ZSHRC="${HOME}/.zshrc"
+  touch "$ZSHRC"
+  /bin/echo "export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_OAUTH_TOKEN"" >> "$ZSHRC"
+  ok "token exported in ~/.zshrc for your terminal sessions"
 fi
 
 # ═══════════════════════════════════════════════════════════════
