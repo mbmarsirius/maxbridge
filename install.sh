@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlKzNmalFoWk5pQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6IjNmalFoWk5pYmlEbTV6WFBVbHJTbGpiciIsImlhdCI6MTc3Njg2MzkxMiwiZXhwIjoyMDkyMjIzOTEyfQ.XzyBKqKdBIIJnQVCKUWFS_5Piy9sCg1FOW3ZYmttSKHV2T7p0tWccnsAjNb0ApaV_ZvTxwpW-OviQ6yUGNY9AQ"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK3RFZW1jU1FYQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6InRFZW1jU1FYWmtReEkwa3NRbnJubEd0UCIsImlhdCI6MTc3Njg2NTU0NSwiZXhwIjoyMDkyMjI1NTQ1fQ.qKcgNWqfAGsOwwbeweAg4ihFkkrQ2LuunZJrwDDOeKfri8RjVrIfQsBiMMp6e3wqPFIp8CmRMnlbBfek-O5GAg"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="b117ebeaaf438e46b6627cde1c67957e7ceec53781c7f1ee14b087ff6e784251"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -425,16 +425,117 @@ else
   RESULT="partial"
 fi
 
-# Final summary
+# ═══════════════════════════════════════════════════════════════
+# 10/10 Bot greeting + session refresh (best-effort, non-blocking)
+# ═══════════════════════════════════════════════════════════════
+# Goal: user's Telegram (or any other configured channel) bot proactively
+# greets them so they don't have to open Telegram, type /status, /model,
+# /restart, or any of the other commands just to verify Maxbridge works.
+#
+# Universal: OpenClaw is open-source and users can be on any version + any
+# custom config. We scan multiple install paths, parse openclaw.json
+# defensively, and fall back to a clear copy-paste manual path on ANY
+# failure. The greeting never blocks install success.
+step "10/10 bot greeting (best-effort)"
+
+OPENCLAW_BIN=""
+for candidate in \
+    "${HOME}/.npm-global/bin/openclaw" \
+    "/opt/homebrew/bin/openclaw" \
+    "/usr/local/bin/openclaw" \
+    "${HOME}/.local/bin/openclaw" \
+    "${HOME}/.bun/bin/openclaw" \
+    "${HOME}/.cargo/bin/openclaw"; do
+  [ -x "$candidate" ] && OPENCLAW_BIN="$candidate" && break
+done
+[ -z "$OPENCLAW_BIN" ] && OPENCLAW_BIN="$(command -v openclaw 2>/dev/null || true)"
+
+PRIMARY_CHAT=""
+PRIMARY_CHANNEL=""
+if [ -n "$OPENCLAW_BIN" ] && [ -f "$OPENCLAW_JSON" ]; then
+  # Parse openclaw.json to find the primary user chat id + channel.
+  # Order of preference:
+  #   1. any enabled telegram account's allowFrom[0] (per-account allowlist)
+  #   2. channels.telegram.allowFrom[0] (top-level allowlist)
+  #   3. (if no telegram) any enabled discord account's allowFrom[0]
+  # Skip wildcards ("*"). Print "<channel> <chatId>" on stdout, empty on miss.
+  PARSED=$(/usr/bin/python3 - "$OPENCLAW_JSON" <<'PY' || true
+import json, sys
+try:
+    with open(sys.argv[1]) as f: d = json.load(f)
+    channels = d.get("channels", {}) or {}
+    for chan_name in ("telegram", "discord"):
+        chan = channels.get(chan_name, {}) or {}
+        if chan.get("enabled") is False:
+            continue
+        # Try enabled per-account allowFrom first
+        for acc_name, acc in (chan.get("accounts", {}) or {}).items():
+            if acc.get("enabled") is False:
+                continue
+            for v in acc.get("allowFrom", []) or []:
+                v = str(v)
+                if v and v != "*":
+                    print(f"{chan_name} {v}")
+                    sys.exit(0)
+        # Then top-level allowFrom
+        for v in chan.get("allowFrom", []) or []:
+            v = str(v)
+            if v and v != "*":
+                print(f"{chan_name} {v}")
+                sys.exit(0)
+except Exception:
+    pass
+PY
+  )
+  if [ -n "$PARSED" ]; then
+    PRIMARY_CHANNEL=$(echo "$PARSED" | awk '{print $1}')
+    PRIMARY_CHAT=$(echo "$PARSED" | awk '{print $2}')
+  fi
+fi
+
+GREETING="🎉 Maxbridge active. I'm now running Claude Opus 4.7 through your Max subscription — no API key, no extra billing. Ask me anything. (Type /status anytime to verify the active model.)"
+
+if [ -n "$OPENCLAW_BIN" ] && [ -n "$PRIMARY_CHAT" ] && [ -n "$PRIMARY_CHANNEL" ]; then
+  # Clean stale session cache so fresh sessions pick up the new default model.
+  # --fix-missing: prune transcripts without backing files. Harmless on clean runs.
+  "$OPENCLAW_BIN" sessions cleanup --all-agents --fix-missing >/dev/null 2>&1 || true
+
+  if "$OPENCLAW_BIN" message send --channel "$PRIMARY_CHANNEL" -t "$PRIMARY_CHAT" -m "$GREETING" >/dev/null 2>&1; then
+    ok "bot greeting sent via $PRIMARY_CHANNEL to chat $PRIMARY_CHAT — check your phone"
+    GREETING_DELIVERED=1
+  else
+    warn "$PRIMARY_CHANNEL message-send failed (bot token invalid, CLI version skew, or gateway not running)"
+    GREETING_DELIVERED=0
+  fi
+else
+  if [ -z "$OPENCLAW_BIN" ]; then
+    warn "openclaw CLI not on PATH — skipping auto-greeting"
+  elif [ ! -f "$OPENCLAW_JSON" ]; then
+    warn "~/.openclaw/openclaw.json not found — skipping auto-greeting"
+  else
+    warn "could not detect primary chat ID in openclaw.json (no allowFrom list found) — skipping auto-greeting"
+  fi
+  GREETING_DELIVERED=0
+fi
+
+# ═══════════════════════════════════════════════════════════════
+# Final summary — tailored to whether greeting was delivered
+# ═══════════════════════════════════════════════════════════════
 step "done — $RESULT"
 printf '\n'
 if [ "$RESULT" = "success" ]; then
   printf '  🎉 Maxbridge is live.\n\n'
   printf '     Your OpenClaw main agent now routes to Claude Opus 4.7\n'
   printf '     through your Max subscription. No API key, no extra billing.\n'
-  printf '     Maxbridge runs as a background daemon — no app window, no menubar icon.\n\n'
-  printf '     Open Telegram (or whichever channel your OpenClaw bot uses).\n'
-  printf '     Run /model — you should see "maxbridge — claude-opus-4-7" as primary.\n'
-  printf '     Ask anything.\n\n'
+  printf '     Daemon runs in the background — no app window, no menubar icon.\n\n'
+
+  if [ "${GREETING_DELIVERED:-0}" = "1" ]; then
+    printf '  📱 Your bot just messaged you on %s — open it to reply and start using Opus 4.7.\n' "$PRIMARY_CHANNEL"
+    printf '     If /status still shows your previous model, type /model once in the bot chat to refresh.\n\n'
+  else
+    printf '  📱 Open Telegram (or whichever channel your OpenClaw bot uses).\n'
+    printf '     Send any message to your bot — the reply will come via Opus 4.7.\n'
+    printf '     If /status still shows your old model, type /model once to refresh.\n\n'
+  fi
 fi
-printf 'REPORT_STATUS=%s\nREPORT_PROXY=%s\nREPORT_LOG=%s\nREPORT_LANDING=%s\n' "$RESULT" "$PROXY" "$LOG_FILE" "$MAXBRIDGE_LANDING_URL"
+printf 'REPORT_STATUS=%s\nREPORT_PROXY=%s\nREPORT_LOG=%s\nREPORT_LANDING=%s\nGREETING_DELIVERED=%s\n' "$RESULT" "$PROXY" "$LOG_FILE" "$MAXBRIDGE_LANDING_URL" "${GREETING_DELIVERED:-0}"
