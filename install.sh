@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK3RFZW1jU1FYQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6InRFZW1jU1FYWmtReEkwa3NRbnJubEd0UCIsImlhdCI6MTc3Njg2NTU0NSwiZXhwIjoyMDkyMjI1NTQ1fQ.qKcgNWqfAGsOwwbeweAg4ihFkkrQ2LuunZJrwDDOeKfri8RjVrIfQsBiMMp6e3wqPFIp8CmRMnlbBfek-O5GAg"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK28tVUZwY1JVQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6Im8tVUZwY1JVaS1tYW5tamNnSmVSRkZuTCIsImlhdCI6MTc3Njg2Njg5NCwiZXhwIjoyMDkyMjI2ODk0fQ.JC6Y7g6iVd7Yrnmm7EvtKjDi_J6pK3wlnQML4ubd53Pp_4k33vNfM2iIMLqJFK1Si-l3LLXo9Uz8F4_46t13Aw"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="b117ebeaaf438e46b6627cde1c67957e7ceec53781c7f1ee14b087ff6e784251"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -313,6 +313,21 @@ cat > "$MB_PLIST" <<PLIST
         <key>NODE_ENV</key><string>production</string>
         <key>HOME</key><string>${HOME}</string>
         <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${HOME}/.local/bin</string>
+        <!--
+          CRITICAL: preferLocalBridge=1 tells proxy.ts:334 to route /v1/messages
+          through the local Claude CLI OAuth bridge. Without it the proxy falls
+          through to BYO-API-key passthrough and returns 503 when no API key is
+          set, even if CLAUDE_CODE_OAUTH_TOKEN is present in env. Root cause of
+          every 503 on a fresh daemon install up to and including v0.1.4.
+        -->
+        <key>MAXBRIDGE_PREFER_LOCAL_BRIDGE</key><string>1</string>
+        <!--
+          Opus 4.7 can think for a while on complex prompts. 180s matches Mus's
+          proven local dev daemon config. Default (90s) is too tight and causes
+          false OpenClaw-gateway timeouts → fallback to non-Maxbridge models.
+        -->
+        <key>MAXBRIDGE_BRIDGE_TIMEOUT_MS</key><string>180000</string>
+        <key>MAXBRIDGE_MODEL</key><string>claude-opus-4-7</string>
 ${PLIST_OAUTH_ENTRY}
     </dict>
 </dict>
@@ -403,25 +418,36 @@ TEST_BODY=$(/bin/cat "$TEST_TMP" 2>/dev/null | /usr/bin/head -c 2000)
 
 printf '  HTTP status: %s\n' "$TEST_HTTP"
 
-if printf '%s' "$TEST_BODY" | /usr/bin/grep -q 'MAXBRIDGE_LIVE'; then
-  ok "Opus 4.7 returned MAXBRIDGE_LIVE"
+# STRICT match — HTTP 200 + actual Claude-Messages content-text shape. The
+# old grep matched MAXBRIDGE_LIVE anywhere in the body (including 503 error
+# bodies that echoed the prompt), producing false positives. The daemon's
+# real success body looks like:
+#   {"content":[{"type":"text","text":"MAXBRIDGE_LIVE"}],...}
+if [ "$TEST_HTTP" = "200" ] && printf '%s' "$TEST_BODY" | /usr/bin/grep -q '"text":"MAXBRIDGE_LIVE"'; then
+  ok "Opus 4.7 returned MAXBRIDGE_LIVE (HTTP 200, valid assistant-text shape)"
   RESULT="success"
 else
-  warn "end-to-end test did not return the expected marker"
+  if [ "$TEST_HTTP" = "200" ]; then
+    warn "HTTP 200 but assistant text did not match expected marker — body may have routed through a fallback model"
+  else
+    warn "end-to-end test failed with HTTP $TEST_HTTP"
+  fi
   printf '  response body (first 2KB):\n'
-  printf '    %s\n' "$TEST_BODY"
-  printf '\n  last 30 lines of daemon stderr log (\`$LOG_DIR/daemon.err.log\`):\n'
+  printf '    %s\n' "$TEST_BODY" | /usr/bin/sed 's/^/    /' | /usr/bin/head -20
+  printf '\n  last 30 lines of daemon stderr log:\n'
   if [ -f "$LOG_DIR/daemon.err.log" ]; then
     /usr/bin/tail -30 "$LOG_DIR/daemon.err.log" 2>/dev/null | /usr/bin/sed 's/^/    /'
   else
     printf '    (no daemon.err.log yet)\n'
   fi
-  printf '\n  last 30 lines of daemon stdout log (\`$LOG_DIR/daemon.out.log\`):\n'
+  printf '\n  last 30 lines of daemon stdout log:\n'
   if [ -f "$LOG_DIR/daemon.out.log" ]; then
     /usr/bin/tail -30 "$LOG_DIR/daemon.out.log" 2>/dev/null | /usr/bin/sed 's/^/    /'
   fi
-  printf '\n  claude CLI version in use (may affect flag compatibility):\n'
-  /usr/bin/env CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_OAUTH_TOKEN" "$CLAUDE_BIN" --version 2>&1 | /usr/bin/sed 's/^/    /' || true
+  printf '\n  claude CLI version (matters for flag compatibility):\n'
+  "$CLAUDE_BIN" --version 2>&1 | /usr/bin/sed 's/^/    /' || true
+  printf '\n  daemon launchd plist env includes:\n'
+  /usr/bin/grep -oE '<key>[A-Z_]*</key>\s*<string>[^<]*</string>' "$MB_PLIST" 2>/dev/null | /usr/bin/sed 's/^/    /' | /usr/bin/head -15 || true
   RESULT="partial"
 fi
 
@@ -452,13 +478,10 @@ done
 
 PRIMARY_CHAT=""
 PRIMARY_CHANNEL=""
+
+# Strategy A: parse openclaw.json for allowFrom (works for Macs where the owner
+# explicitly pinned their chat ID in the config).
 if [ -n "$OPENCLAW_BIN" ] && [ -f "$OPENCLAW_JSON" ]; then
-  # Parse openclaw.json to find the primary user chat id + channel.
-  # Order of preference:
-  #   1. any enabled telegram account's allowFrom[0] (per-account allowlist)
-  #   2. channels.telegram.allowFrom[0] (top-level allowlist)
-  #   3. (if no telegram) any enabled discord account's allowFrom[0]
-  # Skip wildcards ("*"). Print "<channel> <chatId>" on stdout, empty on miss.
   PARSED=$(/usr/bin/python3 - "$OPENCLAW_JSON" <<'PY' || true
 import json, sys
 try:
@@ -468,7 +491,6 @@ try:
         chan = channels.get(chan_name, {}) or {}
         if chan.get("enabled") is False:
             continue
-        # Try enabled per-account allowFrom first
         for acc_name, acc in (chan.get("accounts", {}) or {}).items():
             if acc.get("enabled") is False:
                 continue
@@ -477,11 +499,41 @@ try:
                 if v and v != "*":
                     print(f"{chan_name} {v}")
                     sys.exit(0)
-        # Then top-level allowFrom
         for v in chan.get("allowFrom", []) or []:
             v = str(v)
             if v and v != "*":
                 print(f"{chan_name} {v}")
+                sys.exit(0)
+except Exception:
+    pass
+PY
+  )
+  if [ -n "$PARSED" ]; then
+    PRIMARY_CHANNEL=$(echo "$PARSED" | awk '{print $1}')
+    PRIMARY_CHAT=$(echo "$PARSED" | awk '{print $2}')
+  fi
+fi
+
+# Strategy B: fall back to the most recent active Telegram session (works for
+# Macs where allowFrom isn't pinned — config-by-default lets any user DM the
+# bot, so "primary user" = whoever actually DMs it most recently).
+# Session keys look like:  agent:<agentId>:telegram:direct:<chatId>
+if [ -z "$PRIMARY_CHAT" ] && [ -n "$OPENCLAW_BIN" ]; then
+  PARSED=$("$OPENCLAW_BIN" sessions --active 10080 --all-agents --json 2>/dev/null \
+    | /usr/bin/python3 - <<'PY' || true
+import json, sys, re
+try:
+    d = json.load(sys.stdin)
+    sessions = d.get("sessions", []) or []
+    # newest first
+    sessions.sort(key=lambda s: s.get("updatedAt", 0), reverse=True)
+    for s in sessions:
+        key = s.get("key", "")
+        m = re.match(r"^agent:[^:]+:(telegram|discord):[^:]+:(.+)$", key)
+        if m:
+            chan, chat = m.group(1), m.group(2)
+            if chat and chat != "*":
+                print(f"{chan} {chat}")
                 sys.exit(0)
 except Exception:
     pass
