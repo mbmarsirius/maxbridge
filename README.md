@@ -1,6 +1,8 @@
 <div align="center">
 
-# Maxbridge
+<img width="4800" height="1280" alt="maxbridge-lockup-lime" src="https://github.com/user-attachments/assets/404a17d8-6ad4-49be-abeb-5c41b8c24e0d" />
+
+
 
 **Use your Claude Max in OpenClaw. Free.**
 
