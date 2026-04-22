@@ -4,9 +4,9 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2RrNTN4VDc2QG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImRrNTN4VDc2Tk90SWdYMmowZmZ0T29kUCIsImlhdCI6MTc3Njg1NzMxMywiZXhwIjoyMDkyMjE3MzEzfQ.XP5tHFxJ1iYn1PgnBfYtvaPrb3lEFf61Kf7yMvRUCg8urMB7twAqUloX5YgtJw84M4z5pIJXjm-MtZ7R2DOBDw"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2Z4TVZHVTNRQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImZ4TVZHVTNRQmhMX2FTOUVaempuTkdzTyIsImlhdCI6MTc3Njg1ODkxMSwiZXhwIjoyMDkyMjE4OTExfQ.-yzgjWMGoz2Dh6nOIeoQ8mawvaQXlPKOWK2iTSiGSm9hsPVicj1hI1LxXIdzjEJ92M7vPOkg8cFJ1T8AphNHDA"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
-export MAXBRIDGE_TARBALL_SHA256="44404cfd55ad616696e76bab25815ca43e267717bfc71e506eb71c42042b446d"
+export MAXBRIDGE_TARBALL_SHA256="b2dc73ac7ca68b42dd68174a02e4e43f9e8f1821e1c1e148a792481a5f16a2ad"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
 export MAXBRIDGE_LANDING_URL="https://maxbridge.marsirius.ai"
 export MAXBRIDGE_VERSION="0.1.0"
@@ -162,25 +162,17 @@ sleep 0.5
 # REPORT_STATUS=partial in cold-user tests (2026-04-22).
 CLAUDE_OAUTH_TOKEN=""
 if [ -f "$LOG_FILE" ]; then
-  CLAUDE_OAUTH_TOKEN=$(/usr/bin/python3 - "$LOG_FILE" <<'PY' || true
-import re, sys
-try:
-    with open(sys.argv[1], 'r', errors='replace') as f:
-        text = f.read()
-except Exception:
-    sys.exit(0)
-# Strip ANSI colour codes so multi-line regex works cleanly
-text = re.sub(r'[[0-9;]*m', '', text)
-# Token starts with sk-ant-oat01- and is base64url chars, possibly wrapped
-# across terminal lines. Collect the chain of base64url segments.
-m = re.search(r'(sk-ant-oat01-[A-Za-z0-9_-]+(?:[
-s]+[A-Za-z0-9_-]+)*)', text)
-if m:
-    joined = re.sub(r's+', '', m.group(1))
-    if len(joined) >= 60:
-        print(joined)
-PY
-)
+  # Token extraction — pure-awk, no multi-line regex escapes, TS-template-safe.
+  #   1. awk finds the block between "Your OAuth token" and "Store this token",
+  #      prints it as a single glob (no newlines added).
+  #   2. tr strips all whitespace (the CLI wraps the token across terminal
+  #      lines for display — we want it joined).
+  #   3. grep picks the first sk-ant-oat01-... run of base64url chars.
+  CLAUDE_OAUTH_TOKEN=$(/usr/bin/awk '
+    /Your OAuth token/ { capture = 1; next }
+    /Store this token/ { exit }
+    capture { printf "%s ", $0 }
+  ' "$LOG_FILE" | /usr/bin/tr -d '[:space:]' | /usr/bin/grep -oE 'sk-ant-oat01-[A-Za-z0-9_-]+' | /usr/bin/head -1)
 fi
 
 if [ -n "$CLAUDE_OAUTH_TOKEN" ]; then
