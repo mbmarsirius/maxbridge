@@ -4,7 +4,7 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK1dsZjIwaG5TQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6IldsZjIwaG5TeHdRcTNRblUwRnZRbWNFRyIsImlhdCI6MTc3Njg2OTk3MywiZXhwIjoyMDkyMjI5OTczfQ.DoMtslooDxk8i21yDWTMmHpAKNAg3Wxa-Ci-uCzrY4Z4a7F3cs6dFBXCnzCawHkaRykR9p1qf0joGxn-W5ZdAw"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK3gyMTJveENlQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6IngyMTJveENlNkNCbWxQMThhWUNfYnVrSyIsImlhdCI6MTc3Njg3MjM2MywiZXhwIjoyMDkyMjMyMzYzfQ.mZ-r8jKjN3GVczMhBabYYDdOohG299hq1v6vxUL1R89uRlRjrjHm56jMr1z3MRZdSE230CU2e-lreOacCsv2Aw"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
 export MAXBRIDGE_TARBALL_SHA256="1df890ae9dd7159c2c2b33b820ecc7ca882277f0075c121c4685863ae2de6570"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
@@ -633,5 +633,6 @@ if [ "$RESULT" = "success" ]; then
     printf '     Send any message to your bot — the reply will come via Opus 4.7.\n'
     printf '     If /status still shows your old model, type /model once to refresh.\n\n'
   fi
+  printf '  💡 Stuck on something later? Just tell your Claw:  "Figure it out!"  — Alex Finn style 😉\n\n'
 fi
 printf 'REPORT_STATUS=%s\nREPORT_PROXY=%s\nREPORT_LOG=%s\nREPORT_LANDING=%s\nGREETING_DELIVERED=%s\n' "$RESULT" "$PROXY" "$LOG_FILE" "$MAXBRIDGE_LANDING_URL" "${GREETING_DELIVERED:-0}"
