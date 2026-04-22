@@ -4,9 +4,9 @@
 # Regenerated on every request from https://install.marsirius.ai.
 
 set -u
-export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlK2RiSVc1UjNxQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6ImRiSVc1UjNxZnlLZjJnSlNObzVSS1FwQyIsImlhdCI6MTc3Njg1OTEyOCwiZXhwIjoyMDkyMjE5MTI4fQ.oIghYsgh-IFIy1SqU7sxtWNLjEbvYoUzF5CYzndBHg4tCp-rONm2zz0-5lFbVrBkJxq3emr4dXjAv35Z8DcfCg"
+export MAXBRIDGE_LICENSE="eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJwbGFuIjoibW9udGhseSIsImlzcyI6Im1heGJyaWRnZS5haSIsImF1ZCI6Im1heGJyaWRnZS1jbGllbnQiLCJzdWIiOiJmcmVlKzNmalFoWk5pQG1heGJyaWRnZS5sb2NhbCIsImp0aSI6IjNmalFoWk5pYmlEbTV6WFBVbHJTbGpiciIsImlhdCI6MTc3Njg2MzkxMiwiZXhwIjoyMDkyMjIzOTEyfQ.XzyBKqKdBIIJnQVCKUWFS_5Piy9sCg1FOW3ZYmttSKHV2T7p0tWccnsAjNb0ApaV_ZvTxwpW-OviQ6yUGNY9AQ"
 export MAXBRIDGE_TARBALL_URL="https://github.com/mbmarsirius/maxbridge/releases/download/v0.1.0/maxbridge-daemon-v0.1.1-darwin-arm64.tar.gz"
-export MAXBRIDGE_TARBALL_SHA256="b2dc73ac7ca68b42dd68174a02e4e43f9e8f1821e1c1e148a792481a5f16a2ad"
+export MAXBRIDGE_TARBALL_SHA256="b117ebeaaf438e46b6627cde1c67957e7ceec53781c7f1ee14b087ff6e784251"
 export MAXBRIDGE_LICENSE_API_BASE="https://install.marsirius.ai"
 export MAXBRIDGE_LANDING_URL="https://maxbridge.marsirius.ai"
 export MAXBRIDGE_VERSION="0.1.0"
@@ -389,13 +389,39 @@ fi
 # ═══════════════════════════════════════════════════════════════
 step "9/9 end-to-end test (Opus 4.7 round-trip)"
 sleep 3
-TEST_OUT="$(/usr/bin/curl -fsS --max-time 45 -X POST "$PROXY/v1/messages" -H 'content-type: application/json' -d '{"model":"claude-opus-4-7","max_tokens":40,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}' 2>/dev/null || echo '{}')"
-if printf '%s' "$TEST_OUT" | /usr/bin/grep -q 'MAXBRIDGE_LIVE'; then
+
+# Capture full response (body + HTTP status) — no -f flag this time so we
+# actually SEE errors instead of just the fallback {}.
+TEST_TMP="$(mktemp -t maxbridge-test-XXXXXX)"
+TEST_HTTP=$(/usr/bin/curl -sS --max-time 45 -o "$TEST_TMP" -w '%{http_code}' \
+  -X POST "$PROXY/v1/messages" \
+  -H 'content-type: application/json' \
+  -d '{"model":"claude-opus-4-7","max_tokens":40,"messages":[{"role":"user","content":"Reply with exactly: MAXBRIDGE_LIVE"}]}' \
+  2>/dev/null || echo "000")
+TEST_BODY=$(/bin/cat "$TEST_TMP" 2>/dev/null | /usr/bin/head -c 2000)
+/bin/rm -f "$TEST_TMP"
+
+printf '  HTTP status: %s\n' "$TEST_HTTP"
+
+if printf '%s' "$TEST_BODY" | /usr/bin/grep -q 'MAXBRIDGE_LIVE'; then
   ok "Opus 4.7 returned MAXBRIDGE_LIVE"
   RESULT="success"
 else
-  warn "end-to-end test did not return the expected marker. Response head:"
-  printf '%s\n' "$TEST_OUT" | head -c 500
+  warn "end-to-end test did not return the expected marker"
+  printf '  response body (first 2KB):\n'
+  printf '    %s\n' "$TEST_BODY"
+  printf '\n  last 30 lines of daemon stderr log (\`$LOG_DIR/daemon.err.log\`):\n'
+  if [ -f "$LOG_DIR/daemon.err.log" ]; then
+    /usr/bin/tail -30 "$LOG_DIR/daemon.err.log" 2>/dev/null | /usr/bin/sed 's/^/    /'
+  else
+    printf '    (no daemon.err.log yet)\n'
+  fi
+  printf '\n  last 30 lines of daemon stdout log (\`$LOG_DIR/daemon.out.log\`):\n'
+  if [ -f "$LOG_DIR/daemon.out.log" ]; then
+    /usr/bin/tail -30 "$LOG_DIR/daemon.out.log" 2>/dev/null | /usr/bin/sed 's/^/    /'
+  fi
+  printf '\n  claude CLI version in use (may affect flag compatibility):\n'
+  /usr/bin/env CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_OAUTH_TOKEN" "$CLAUDE_BIN" --version 2>&1 | /usr/bin/sed 's/^/    /' || true
   RESULT="partial"
 fi
 

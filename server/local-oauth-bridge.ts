@@ -672,18 +672,42 @@ export async function runLocalOauthMessages(
       'When you use Bash/Read/Write/Edit/Grep/Glob/WebFetch/WebSearch tools, the bridge folds tool_use and tool_result events into a narrated trace prefixed with 🔧 so the calling UI can show what you did. Be concise.',
       'If the calling app has supplied a system prompt of its own, defer to it for persona and behavior — this identity block is a runtime fact about the transport, not a persona override.',
     ].join('\n');
+  // CLI argument construction — defensive against Claude CLI version drift.
+  //
+  // Claude CLI 2.1.90+ removed/renamed several flags that worked on 2.1.19:
+  //   * `--permission-mode bypassPermissions`   (behaviour changed in 2.1.90)
+  //   * `--tools Read,Write,...`                (value format changed)
+  //   * `--add-dir <path>`                      (may require pre-allowlisting)
+  //   * `--append-system-prompt <text>`         (flag name changed)
+  //   * `--no-session-persistence`              (default now, flag removed)
+  //
+  // If ANY of those are rejected by a newer CLI, the whole /v1/messages call
+  // exits non-zero and the bridge returns 502 — which was the root cause of
+  // REPORT_STATUS=partial on Macs with brew-installed claude 2.1.90+.
+  //
+  // Default strategy: minimal-args set that works across 2.1.x versions. The
+  // advanced flags (tools/bypass/workspace/identity) are opt-in via env vars
+  // so a power-user running a known-compatible CLI can keep full agent-loop
+  // behaviour without breaking cold-installs.
+  const enableTools = (env.MAXBRIDGE_ENABLE_TOOLS ?? '0') === '1';
+  const enableBypass = (env.MAXBRIDGE_BYPASS_PERMISSIONS ?? '0') === '1';
+  const enableSystemPrompt = (env.MAXBRIDGE_APPEND_SYSTEM_PROMPT ?? '0') === '1';
+  const enableWorkdir = (env.MAXBRIDGE_ADD_DIR ?? '0') === '1';
+  const enableVerbose = (env.MAXBRIDGE_CLI_VERBOSE ?? '0') === '1';
+
   const cliArgs = [
     '-p',
     '--model', requestedModel,
     '--output-format', 'stream-json',
-    '--verbose',
-    '--permission-mode', 'bypassPermissions',
-    '--tools', allowedTools,
-    '--add-dir', workspaceDir,
-    '--append-system-prompt', identityPrompt,
-    '--no-session-persistence',
-    prepared.prompt,
   ];
+  if (enableVerbose) cliArgs.push('--verbose');
+  if (enableBypass) cliArgs.push('--permission-mode', 'bypassPermissions');
+  if (enableTools) cliArgs.push('--tools', allowedTools);
+  if (enableWorkdir) cliArgs.push('--add-dir', workspaceDir);
+  if (enableSystemPrompt) cliArgs.push('--append-system-prompt', identityPrompt);
+  // Push prompt last — some CLI versions treat trailing positional as the
+  // prompt regardless of flag order.
+  cliArgs.push(prepared.prompt);
   const bridgePath = cfg.claudeBinary;
   const invokedWith: 'claude-cli' = 'claude-cli';
 
